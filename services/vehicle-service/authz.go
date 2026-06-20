@@ -63,10 +63,10 @@ func CanStartClimate(s Subject) Decision {
 	return deny("start_climate requires owner, co-owner, or driver")
 }
 
-// CanStartVehicle: owner or co-owner AND a fresh passkey step-up. High-risk command.
+// CanStartVehicle: owner, co-owner, or driver AND a fresh passkey step-up. High-risk command.
 func CanStartVehicle(s Subject) Decision {
-	if !s.hasRole(models.RoleOwner, models.RoleCoOwner) {
-		return deny("start_vehicle requires owner or co-owner")
+	if !s.hasRole(models.RoleOwner, models.RoleCoOwner, models.RoleDriver) {
+		return deny("start_vehicle requires owner, co-owner, or driver")
 	}
 	if !s.StepUpFresh {
 		return deny("start_vehicle requires a recent passkey step-up")

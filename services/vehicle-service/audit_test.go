@@ -45,7 +45,7 @@ func TestAuditEmitWritesDeniedEvent(t *testing.T) {
 		ResourceType: "vehicle",
 		ResourceID:   "veh-1",
 		Decision:     models.DecisionDeny,
-		Reason:       "start_vehicle requires owner or co-owner",
+		Reason:       "start_vehicle requires a recent passkey step-up",
 	})
 
 	c := <-got

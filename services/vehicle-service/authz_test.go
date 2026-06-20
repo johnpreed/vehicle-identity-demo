@@ -55,7 +55,7 @@ func TestCanUnlockAndClimate(t *testing.T) {
 	}
 }
 
-func TestCanStartVehicleRequiresOwnerAndStepUp(t *testing.T) {
+func TestCanStartVehicleRequiresAllowedRoleAndStepUp(t *testing.T) {
 	cases := []struct {
 		name      string
 		sub       Subject
@@ -64,10 +64,11 @@ func TestCanStartVehicleRequiresOwnerAndStepUp(t *testing.T) {
 	}{
 		{"owner+fresh", consumer(models.RoleOwner, true), true, ""},
 		{"co-owner+fresh", consumer(models.RoleCoOwner, true), true, ""},
+		{"driver+fresh", consumer(models.RoleDriver, true), true, ""},
 		{"owner+stale", consumer(models.RoleOwner, false), false, "step-up"},
-		{"driver+fresh", consumer(models.RoleDriver, true), false, "owner or co-owner"},
-		{"viewer+fresh", consumer(models.RoleViewer, true), false, "owner or co-owner"},
-		{"staff", staff(models.PersonaManufacturing), false, "owner or co-owner"},
+		{"driver+stale", consumer(models.RoleDriver, false), false, "step-up"},
+		{"viewer+fresh", consumer(models.RoleViewer, true), false, "owner, co-owner, or driver"},
+		{"staff", staff(models.PersonaManufacturing), false, "owner, co-owner, or driver"},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {

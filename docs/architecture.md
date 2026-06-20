@@ -129,7 +129,7 @@ A `Subject` is either a **consumer** (with a resource-scoped `Role` on the targe
 | view_status | `CanViewStatus` | owner, co-owner, driver, viewer |
 | unlock_doors | `CanUnlock` | owner, co-owner, driver |
 | start_climate | `CanStartClimate` | owner, co-owner, driver |
-| **start_vehicle** | `CanStartVehicle` | owner, co-owner **+ fresh passkey step-up** |
+| **start_vehicle** | `CanStartVehicle` | owner, co-owner, driver **+ fresh passkey step-up** |
 | invite_driver | `CanInviteDriver` | owner, co-owner |
 | assign_owner | `CanAssignOwner` | sales_support |
 | create_vehicle | `CanCreateVehicle` | manufacturing |
@@ -170,7 +170,8 @@ call-home flow groups together as, e.g.: `bootstrap_provisioned` → `service_to
 
 `start_vehicle` is the high-risk command and has three independent requirements:
 
-1. **Role** — the caller must be `owner` or `co-owner` (a driver is denied and the denial is audited).
+1. **Role** — the caller must be `owner`, `co-owner`, or `driver` (a `viewer` is denied and the denial is
+   audited).
 2. **Fresh passkey step-up** — the caller must have completed a WebAuthn assertion within the last 5
    minutes. vehicle-service learns this from identity-service `/me` (`step_up_fresh`). If step-up is stale,
    vehicle-service returns `428 Precondition Required`; consumer-web then runs the step-up ceremony and

@@ -67,23 +67,26 @@ If you prefer to skip the manual step, run `make seed` instead (creates the demo
 
 ---
 
-## Flow 3 — Invite a driver, then a denied command
+## Flow 3 — Invite a driver, and a denied action
 
 1. As **alice**, open the vehicle detail → **Invite a driver**. Enter username **`bob`**, role
    **`driver`**, click **Send invite**.
 2. Click **Switch user** (top right). Enter **`bob`**, click **Create passkey** (approve prompt).
 3. As **bob**, a **Pending invitations** card appears → click **Accept**. `bob` now has the `driver` role.
-4. Select the vehicle. As a driver, `bob` can:
+4. Select the vehicle. As a driver, `bob` can operate the vehicle:
    - **Unlock doors** → allowed ✓
    - **Start climate** → allowed ✓
-5. Click **Start vehicle (high-risk)**:
-   - **Denied** — "start_vehicle requires owner or co-owner". (No step-up prompt; the role check fails
-     first.)
-6. (Staff-web, Security Auditor) Search audit logs → a `start_vehicle` **DENY** event for `bob` with the
+   - **Start vehicle (high-risk)** → allowed ✓ **after a passkey step-up** (drivers may drive; the step-up
+     ceremony is shown in Flow 4).
+5. But a driver is **not a manager**. Under **Invite a driver**, have `bob` try to invite someone (e.g.
+   `carol`):
+   - **Denied** — "invite_driver requires owner or co-owner".
+6. (Staff-web, Security Auditor) Search audit logs → an `invite_driver` **DENY** event for `bob` with the
    reason recorded.
 
-> What was demonstrated: resource-scoped roles, least privilege, and that **denied** high-risk attempts are
-> audited.
+> What was demonstrated: resource-scoped roles and least privilege — a driver can *operate* the vehicle
+> (including the high-risk start, gated by step-up) but cannot *manage* who else has access; the denied
+> attempt is audited.
 
 ---
 
@@ -98,7 +101,8 @@ If you prefer to skip the manual step, run `make seed` instead (creates the demo
    `step_up_fresh: true` in metadata.
 
 > What was demonstrated: passkey **step-up** gating a high-risk command, plus an idempotency key so a
-> replayed request does not re-execute.
+> replayed request does not re-execute. The same step-up gate applies to a **driver** starting the vehicle
+> (Flow 3) — role and step-up are checked independently.
 
 ---
 
