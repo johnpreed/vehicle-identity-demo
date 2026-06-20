@@ -1,6 +1,6 @@
 COMPOSE = docker compose -f deploy/docker-compose.yml
 
-.PHONY: up down test seed logs build ps
+.PHONY: up down test logs build ps
 
 up: ## Build and start the full stack
 	$(COMPOSE) up --build -d
@@ -17,9 +17,6 @@ logs: ## Tail logs from all services
 
 ps: ## Show container status
 	$(COMPOSE) ps
-
-seed: ## Seed (create) the demo vehicle so it can register end-to-end
-	bash deploy/seed.sh
 
 test: ## Run Go unit tests
 	go test ./...

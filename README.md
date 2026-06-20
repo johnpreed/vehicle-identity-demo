@@ -20,7 +20,6 @@ The focus is the identity platform — not a flashy UI.
 ```bash
 cp .env.example .env
 make up        # docker compose up --build
-make seed      # create a demo vehicle (the simulator burns it in and registers it)
 make logs      # tail logs
 make down      # stop + remove
 make test      # run Go tests

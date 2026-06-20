@@ -51,8 +51,6 @@ creates and brings each one's device online automatically. You can watch the fle
 > lifecycle** recorded and correlation-traceable. Every created vehicle is burned in and brought online the
 > same way; the fleet starts empty.
 
-If you prefer to skip the manual step, run `make seed` instead (creates a demo vehicle for you).
-
 ---
 
 ## Flow 2 — Consumer claims the vehicle (passkey)
