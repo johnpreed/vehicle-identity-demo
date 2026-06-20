@@ -118,7 +118,13 @@ function Vehicles({ persona, onNotice }) {
         <tbody>
           {vehicles.map((v) => (
             <tr key={v.id}>
-              <td><b>{v.vin}</b></td>
+              <td className="mono idcell">
+                <b>{v.vin}</b>
+                <button
+                  className="ghost copy"
+                  title="Copy VIN"
+                  onClick={() => navigator.clipboard?.writeText(v.vin)}>⧉</button>
+              </td>
               <td className="mono idcell">
                 {v.id}
                 <button
@@ -127,7 +133,15 @@ function Vehicles({ persona, onNotice }) {
                   onClick={() => navigator.clipboard?.writeText(v.id)}>⧉</button>
               </td>
               <td><span className="badge">{v.lifecycle_status}</span></td>
-              <td className="mono">{v.claim_code || '—'}</td>
+              <td className="mono idcell">
+                {v.claim_code || '—'}
+                {v.claim_code && (
+                  <button
+                    className="ghost copy"
+                    title="Copy claim code"
+                    onClick={() => navigator.clipboard?.writeText(v.claim_code)}>⧉</button>
+                )}
+              </td>
               <td className="muted">{v.connectivity_state}</td>
             </tr>
           ))}
