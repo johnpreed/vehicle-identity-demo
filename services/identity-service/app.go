@@ -67,7 +67,7 @@ func (a *App) handleSignupStart(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) handleSignupFinish(w http.ResponseWriter, r *http.Request) {
-	cer, cred, ok := a.takeCeremony(w, r)
+	cer, cred, ok := a.consumeCeremony(w, r)
 	if !ok {
 		return
 	}
@@ -127,7 +127,7 @@ func (a *App) handleSigninStart(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) handleSigninFinish(w http.ResponseWriter, r *http.Request) {
-	cer, cred, ok := a.takeCeremony(w, r)
+	cer, cred, ok := a.consumeCeremony(w, r)
 	if !ok {
 		return
 	}
@@ -166,7 +166,7 @@ func (a *App) handleStepUpStart(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) handleStepUpFinish(w http.ResponseWriter, r *http.Request) {
-	cer, cred, ok := a.takeCeremony(w, r)
+	cer, cred, ok := a.consumeCeremony(w, r)
 	if !ok {
 		return
 	}
@@ -222,7 +222,7 @@ func (a *App) validateAssertion(ctx context.Context, wu *waUser, session webauth
 	return credential, nil
 }
 
-func (a *App) takeCeremony(w http.ResponseWriter, r *http.Request) (ceremony, []byte, bool) {
+func (a *App) consumeCeremony(w http.ResponseWriter, r *http.Request) (ceremony, []byte, bool) {
 	var req struct {
 		CeremonyID string          `json:"ceremony_id"`
 		Credential json.RawMessage `json:"credential"`
