@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -10,14 +11,26 @@ import (
 	"vehicle-identity-demo/packages/shared/models"
 )
 
+// issuerPrincipal is the subject identity-service uses for itself — it is the sole
+// token issuer (Ed25519 signer + JWKS) in the system.
+const issuerPrincipal = "service:identity-service"
+
 // auditTokenEvent records a service_token_issued decision (ALLOW or DENY) so the
 // audit log shows every workload that authenticated to call another service. It is
-// fire-and-forget so token issuance never blocks on audit-service.
-func (a *App) auditTokenEvent(r *http.Request, actorType, actorID, audience, reason string, allow bool, meta map[string]any) {
+// fire-and-forget so token issuance never blocks on audit-service. The reason is
+// composed to make the issuer -> recipient -> audience relationship explicit, and
+// the issuer is recorded in metadata. `detail` is only used to explain a denial.
+func (a *App) auditTokenEvent(r *http.Request, actorType, actorID, audience, detail string, allow bool, meta map[string]any) {
 	decision := models.DecisionDeny
+	reason := fmt.Sprintf("%s denied a token to %s for audience %s: %s", issuerPrincipal, actorID, audience, detail)
 	if allow {
 		decision = models.DecisionAllow
+		reason = fmt.Sprintf("%s issued a token to %s for audience %s", issuerPrincipal, actorID, audience)
 	}
+	if meta == nil {
+		meta = map[string]any{}
+	}
+	meta["issuer"] = issuerPrincipal
 	corr := httpx.CorrelationID(r.Context())
 	go a.audit.emit(context.Background(), corr, models.AuditEvent{
 		ActorType:    actorType,
@@ -124,7 +137,7 @@ func (a *App) issueVehicleToken(w http.ResponseWriter, r *http.Request, vin, sec
 		httpx.WriteError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	a.auditTokenEvent(r, models.ActorVehicle, sub, audience, "workload token issued", true,
+	a.auditTokenEvent(r, models.ActorVehicle, sub, audience, "", true,
 		map[string]any{"grant_type": "vehicle_bootstrap", "scope": scope, "jti": jti, "expires_at": exp})
 	httpx.WriteJSON(w, http.StatusOK, map[string]any{"token": token, "sub": sub, "scope": scope, "audience": audience})
 }
@@ -164,7 +177,7 @@ func (a *App) issueServiceToken(w http.ResponseWriter, r *http.Request, clientID
 		httpx.WriteError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	a.auditTokenEvent(r, models.ActorService, subject, audience, "workload token issued", true,
+	a.auditTokenEvent(r, models.ActorService, subject, audience, "", true,
 		map[string]any{"grant_type": "service_credential", "scope": scope, "jti": jti, "expires_at": exp})
 	httpx.WriteJSON(w, http.StatusOK, map[string]any{"token": token, "sub": subject, "scope": scope, "audience": audience})
 }
