@@ -38,13 +38,14 @@ export default function App() {
 
       {notice && <div className={'notice ' + notice.type}>{notice.text}</div>}
 
+      <Vehicles persona={persona} onNotice={setNotice} />
+
       <div className="grid">
         <div>
           <CreateVehicle persona={persona} onNotice={setNotice} />
-          <AssignOwner persona={persona} onNotice={setNotice} />
         </div>
         <div>
-          <Vehicles persona={persona} onNotice={setNotice} />
+          <AssignOwner persona={persona} onNotice={setNotice} />
         </div>
       </div>
 
@@ -117,12 +118,18 @@ function Vehicles({ persona, onNotice }) {
       <h2>Fleet <button className="ghost" onClick={load}>↻</button></h2>
       {vehicles.length === 0 && <p className="muted">No vehicles. Create one as manufacturing.</p>}
       <table className="states">
-        <thead><tr><th>VIN</th><th>id</th><th>lifecycle</th><th>claim code</th><th>conn.</th></tr></thead>
+        <thead><tr><th>VIN</th><th>vehicle id</th><th>lifecycle</th><th>claim code</th><th>conn.</th></tr></thead>
         <tbody>
           {vehicles.map((v) => (
             <tr key={v.id}>
               <td><b>{v.vin}</b></td>
-              <td className="muted mono small">{v.id.slice(0, 8)}…</td>
+              <td className="mono idcell">
+                {v.id}
+                <button
+                  className="ghost copy"
+                  title="Copy vehicle id"
+                  onClick={() => navigator.clipboard?.writeText(v.id)}>⧉</button>
+              </td>
               <td><span className="badge">{v.lifecycle_status}</span></td>
               <td className="mono">{v.claim_code || '—'}</td>
               <td className="muted">{v.connectivity_state}</td>
@@ -153,7 +160,7 @@ function AuditLogs({ persona, onNotice }) {
     <div className="card">
       <h2>Audit logs <span className="muted">(security_auditor)</span></h2>
       <div className="row wrap">
-        <input placeholder="filter by vehicle id (optional)" value={resourceId} onChange={(e) => setResourceId(e.target.value)} />
+        <input placeholder="filter by vehicle id — full or partial (optional)" value={resourceId} onChange={(e) => setResourceId(e.target.value)} />
         <button onClick={load}>Search</button>
       </div>
       {loaded && rows.length === 0 && <p className="muted">No results (or access denied for this persona).</p>}

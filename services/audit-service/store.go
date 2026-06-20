@@ -72,8 +72,16 @@ func (s *Store) Search(ctx context.Context, f SearchFilters) ([]Record, error) {
 			query += fmt.Sprintf(" AND %s=$%d", col, len(args))
 		}
 	}
+	// resource_id (vehicle id) matches as a case-insensitive substring so staff can
+	// filter by a full or partial id.
+	addLike := func(col, val string) {
+		if val != "" {
+			args = append(args, "%"+val+"%")
+			query += fmt.Sprintf(" AND %s ILIKE $%d", col, len(args))
+		}
+	}
 	add("resource_type", f.ResourceType)
-	add("resource_id", f.ResourceID)
+	addLike("resource_id", f.ResourceID)
 	add("actor_id", f.ActorID)
 	add("action", f.Action)
 	add("decision", f.Decision)

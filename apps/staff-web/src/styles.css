@@ -71,6 +71,15 @@ button.ghost { background: transparent; border: 1px solid var(--line); color: va
 .small { font-size: 12px; }
 .muted { color: var(--muted); }
 
+.idcell { white-space: nowrap; }
+.idcell .copy {
+  margin-left: 6px;
+  padding: 0 6px;
+  font-size: 12px;
+  line-height: 1.4;
+  vertical-align: middle;
+}
+
 .notice { padding: 10px 12px; border-radius: 8px; margin: 0 0 18px; font-size: 14px; }
 .notice.ok { background: rgba(62,207,142,.14); color: var(--ok); }
 .notice.err { background: rgba(255,107,107,.14); color: var(--err); }
