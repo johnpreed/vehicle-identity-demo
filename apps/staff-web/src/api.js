@@ -24,8 +24,8 @@ async function request(method, url, persona, body) {
 }
 
 export const listVehicles = (persona) => request('GET', `${VEHICLE}/vehicles`, persona)
-export const spawn = (persona, vin, model) =>
-  request('POST', `${VEHICLE}/staff/vehicles/spawn`, persona, { vin, model })
+export const createVehicle = (persona, vin, model) =>
+  request('POST', `${VEHICLE}/staff/vehicles/create`, persona, { vin, model })
 export const assignOwner = (persona, id, username) =>
   request('POST', `${VEHICLE}/staff/vehicles/${id}/assign-owner`, persona, { username })
 

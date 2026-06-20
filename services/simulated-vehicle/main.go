@@ -1,5 +1,5 @@
 // Command simulated-vehicle is a fleet simulator: it models the physical devices for
-// every manufactured vehicle. It discovers spawned vehicles from vehicle-service,
+// every manufactured vehicle. It discovers created vehicles from vehicle-service,
 // performs factory "burn-in" (provisioning a bootstrap credential at identity-service
 // using a scoped factory workload token), then exchanges each device's VIN +
 // bootstrap secret for a short-lived JWT, registers the device, and heartbeats.
@@ -82,7 +82,7 @@ func (f *fleet) run() {
 	}
 }
 
-// reconcile discovers all spawned vehicles, brings new ones online, and heartbeats
+// reconcile discovers all created vehicles, brings new ones online, and heartbeats
 // the rest. Discovery uses the manufacturing persona: the simulator is the
 // manufacturer's device fleet gateway.
 func (f *fleet) reconcile(ctx context.Context) {

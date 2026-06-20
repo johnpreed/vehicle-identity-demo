@@ -20,29 +20,29 @@ Open the two UIs:
 - **Staff web:** http://localhost:5174
 
 The `simulated-vehicle` service runs as a **fleet simulator**: it watches for vehicles that manufacturing
-spawns and brings each one's device online automatically. You can watch the fleet at http://localhost:8084/.
+creates and brings each one's device online automatically. You can watch the fleet at http://localhost:8084/.
 
 ---
 
 ## Flow 1 — Manufacturing (workload identity)
 
 1. In **staff-web**, keep the **Manufacturing Operator** persona selected.
-2. Under **Spawn vehicle**, either type a VIN such as **`VIN-DEMO-0001`** or **leave it blank** to
-   auto-generate one, then click **Spawn**.
+2. Under **Create vehicle**, either type a VIN such as **`VIN-DEMO-0001`** or **leave it blank** to
+   auto-generate one, then click **Create**.
    - Result: vehicle is created as `MANUFACTURED` and a **claim code** is shown — note it.
 3. Within ~5–10 seconds the **fleet simulator** discovers the new vehicle, provisions its bootstrap
    credential ("factory burn-in"), exchanges VIN + secret for a short-lived JWT, and registers it. Click
    **↻** on the **Fleet** card:
    - `lifecycle = CLAIMABLE`, `connectivity = ONLINE`.
 4. Switch persona to **Security Auditor**, scroll to **Audit logs**, click **Search**:
-   - You'll see `spawn_vehicle` (actor `staff:manufacturing`, ALLOW) and `register_vehicle`
+   - You'll see `create_vehicle` (actor `staff:manufacturing`, ALLOW) and `register_vehicle`
      (actor `vehicle:service:simulated-vehicle:<VIN>`, ALLOW) sharing a correlation trail.
 
 > What was demonstrated: a workload (the vehicle) authenticating with a factory credential, receiving a
-> short-lived JWT, and registering — all audited. This works for **any** spawned vehicle, not just the
+> short-lived JWT, and registering — all audited. This works for **any** created vehicle, not just the
 > seeded demo VIN.
 
-If you prefer to skip the manual spawn, run `make seed` instead (spawns the demo vehicle for you).
+If you prefer to skip the manual step, run `make seed` instead (creates the demo vehicle for you).
 
 ---
 
@@ -101,8 +101,8 @@ In **staff-web**, switch personas and observe server-side enforcement:
 |---|---|---|
 | **Service Technician** | View Fleet / a vehicle's status | Allowed (read only); cannot unlock/start/assign |
 | **Sales / Support** | **Assign owner** (paste a vehicle id + a username) | Allowed |
-| **Sales / Support** | **Spawn** | **Denied** |
-| **Manufacturing** | **Spawn** | Allowed |
+| **Sales / Support** | **Create vehicle** | **Denied** |
+| **Manufacturing** | **Create vehicle** | Allowed |
 | **Manufacturing** | **Assign owner** | **Denied** |
 | **Security Auditor** | **Audit logs → Search** | Allowed |
 | Any non-auditor | **Audit logs → Search** | **Denied** (403) |

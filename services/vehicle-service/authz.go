@@ -93,10 +93,10 @@ func CanAssignOwner(s Subject) Decision {
 	return deny("assign_owner requires the sales_support persona")
 }
 
-// CanSpawnVehicle: staff manufacturing.
-func CanSpawnVehicle(s Subject) Decision {
+// CanCreateVehicle: staff manufacturing.
+func CanCreateVehicle(s Subject) Decision {
 	if s.hasPersona(models.PersonaManufacturing) {
 		return allow()
 	}
-	return deny("spawn_vehicle requires the manufacturing persona")
+	return deny("create_vehicle requires the manufacturing persona")
 }

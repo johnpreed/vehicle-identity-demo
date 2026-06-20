@@ -142,8 +142,8 @@ func (a *App) handleRegister(w http.ResponseWriter, r *http.Request) {
 	}
 	v, _ := a.store.GetByVIN(r.Context(), req.VIN)
 	if v == nil {
-		// Not yet spawned by manufacturing staff.
-		httpx.WriteError(w, http.StatusNotFound, "vehicle has not been manufactured/spawned")
+		// Not yet created by manufacturing staff.
+		httpx.WriteError(w, http.StatusNotFound, "vehicle has not been manufactured/created")
 		return
 	}
 	if v.LifecycleStatus == "MANUFACTURED" || v.LifecycleStatus == "PROVISIONED" || v.LifecycleStatus == "REGISTERED" {

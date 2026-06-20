@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Seed convenience: spawn the demo vehicle (manufacturing persona) so the simulated
+# Seed convenience: create the demo vehicle (manufacturing persona) so the simulated
 # vehicle can register without manually driving the staff UI first.
 set -euo pipefail
 
@@ -10,12 +10,12 @@ if [ -z "${VIN}" ] && [ -f .env ]; then
 fi
 VIN="${VIN:-VIN-DEMO-0001}"
 
-echo "Spawning demo vehicle ${VIN} via ${VEHICLE_URL} (manufacturing persona)..."
-curl -fsS -X POST "${VEHICLE_URL}/staff/vehicles/spawn" \
+echo "Creating demo vehicle ${VIN} via ${VEHICLE_URL} (manufacturing persona)..."
+curl -fsS -X POST "${VEHICLE_URL}/staff/vehicles/create" \
   -H 'Content-Type: application/json' \
   -H 'X-Staff-Persona: manufacturing' \
   -d "{\"vin\":\"${VIN}\",\"model\":\"Demo EV\"}" || {
-    echo "Spawn failed (vehicle may already exist). Continuing."
+    echo "Create failed (vehicle may already exist). Continuing."
   }
 echo
 echo "Done. The simulated vehicle will call home and register within a few seconds."

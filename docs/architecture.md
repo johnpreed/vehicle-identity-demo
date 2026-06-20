@@ -78,7 +78,7 @@ scope** (see `packages/shared/jwt`).
   identity-service stays the single source of truth for *who the user is* and *whether step-up is fresh*.
 - **Vehicle device credentials are factory-provisioned.** Each device has a VIN and a bootstrap secret. The
   seeded demo device (`VIN-DEMO-0001`) ships with a secret pre-seeded into identity-service. For any other
-  vehicle a manufacturing operator spawns, the **fleet simulator** performs factory "burn-in": it provisions
+  vehicle a manufacturing operator creates, the **fleet simulator** performs factory "burn-in": it provisions
   a fresh bootstrap credential at identity-service (using a scoped `bootstrap.provision` factory workload
   token) before the device calls home. At runtime the device exchanges VIN + bootstrap secret for a
   short-lived JWT — the long-lived secret never leaves the device boundary and is never used to call business
@@ -104,14 +104,14 @@ powered, climate) is orthogonal to lifecycle and ownership:
 
 Lifecycle transitions in the demo:
 
-1. **Spawn** (manufacturing staff) → `MANUFACTURED`, a claim code is generated.
+1. **Create** (manufacturing staff) → `MANUFACTURED`, a claim code is generated.
 2. **Burn-in** (fleet simulator, for non-seeded VINs) → a bootstrap credential is provisioned at
    identity-service via a `bootstrap.provision` factory workload token.
 3. **Register** (the device calls home with a VIN-bound `vehicle_bootstrap` JWT) → device identity recorded,
    `lifecycle = CLAIMABLE`, `connectivity = ONLINE`. Registration is *gated on the vehicle having been
-   spawned* and on the token subject matching the VIN. The `simulated-vehicle` service runs as a **fleet
-   simulator**: it discovers every spawned vehicle and brings its device online, so *any* vehicle a
-   manufacturing operator spawns calls home automatically (not just the seeded demo VIN).
+   created* and on the token subject matching the VIN. The `simulated-vehicle` service runs as a **fleet
+   simulator**: it discovers every created vehicle and brings its device online, so *any* vehicle a
+   manufacturing operator creates calls home automatically (not just the seeded demo VIN).
 4. **Claim** (consumer with VIN + claim code) or **Assign owner** (sales_support override) →
    `lifecycle = CLAIMED`, `ownership = OWNER_ASSIGNED`, an `owner` grant is created.
 
@@ -132,7 +132,7 @@ A `Subject` is either a **consumer** (with a resource-scoped `Role` on the targe
 | **start_vehicle** | `CanStartVehicle` | owner, co-owner **+ fresh passkey step-up** |
 | invite_driver | `CanInviteDriver` | owner, co-owner |
 | assign_owner | `CanAssignOwner` | sales_support |
-| spawn_vehicle | `CanSpawnVehicle` | manufacturing |
+| create_vehicle | `CanCreateVehicle` | manufacturing |
 | read_audit_logs | (audit-service) | security_auditor |
 
 ## Audit model

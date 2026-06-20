@@ -42,7 +42,7 @@ func scanVehicle(row pgx.Row) (*Vehicle, error) {
 	return &v, err
 }
 
-func (s *Store) Spawn(ctx context.Context, vin, model, claimCode string) (*Vehicle, error) {
+func (s *Store) Create(ctx context.Context, vin, model, claimCode string) (*Vehicle, error) {
 	id := uuid.NewString()
 	_, err := s.pool.Exec(ctx,
 		`INSERT INTO vehicles (id, vin, model, claim_code, lifecycle_status) VALUES ($1,$2,$3,$4,'MANUFACTURED')`,

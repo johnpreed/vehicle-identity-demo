@@ -83,11 +83,11 @@ func TestCanStartVehicleRequiresOwnerAndStepUp(t *testing.T) {
 }
 
 func TestStaffActions(t *testing.T) {
-	if d := CanSpawnVehicle(staff(models.PersonaManufacturing)); !d.Allowed {
-		t.Error("manufacturing should spawn")
+	if d := CanCreateVehicle(staff(models.PersonaManufacturing)); !d.Allowed {
+		t.Error("manufacturing should create")
 	}
-	if d := CanSpawnVehicle(staff(models.PersonaSalesSupport)); d.Allowed {
-		t.Error("sales_support should NOT spawn")
+	if d := CanCreateVehicle(staff(models.PersonaSalesSupport)); d.Allowed {
+		t.Error("sales_support should NOT create")
 	}
 	if d := CanAssignOwner(staff(models.PersonaSalesSupport)); !d.Allowed {
 		t.Error("sales_support should assign owner")

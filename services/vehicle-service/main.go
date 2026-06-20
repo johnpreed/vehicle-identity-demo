@@ -48,7 +48,7 @@ func main() {
 	requireHeartbeat := middleware.RequireScope(verifier, models.AudVehicleService, models.ScopeVehicleHeartbeat)
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("POST /staff/vehicles/spawn", app.handleSpawn)
+	mux.HandleFunc("POST /staff/vehicles/create", app.handleCreate)
 	mux.HandleFunc("POST /staff/vehicles/{id}/assign-owner", app.handleAssignOwner)
 	mux.HandleFunc("GET /vehicles", app.handleListVehicles)
 	mux.HandleFunc("GET /vehicles/lookup", app.handleLookup)

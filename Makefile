@@ -18,7 +18,7 @@ logs: ## Tail logs from all services
 ps: ## Show container status
 	$(COMPOSE) ps
 
-seed: ## Seed (spawn) the demo vehicle so it can register end-to-end
+seed: ## Seed (create) the demo vehicle so it can register end-to-end
 	bash deploy/seed.sh
 
 test: ## Run Go unit tests

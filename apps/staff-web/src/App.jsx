@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import * as api from './api.js'
 
 const PERSONAS = [
-  { id: 'manufacturing', label: 'Manufacturing Operator', can: 'spawn_vehicle' },
+  { id: 'manufacturing', label: 'Manufacturing Operator', can: 'create_vehicle' },
   { id: 'sales_support', label: 'Sales / Support', can: 'assign_owner' },
   { id: 'service_technician', label: 'Service Technician', can: 'view_status' },
   { id: 'security_auditor', label: 'Security Auditor', can: 'read_audit_logs' },
@@ -41,7 +41,7 @@ export default function App() {
 
       <div className="grid">
         <div>
-          <Spawn persona={persona} onNotice={setNotice} />
+          <CreateVehicle persona={persona} onNotice={setNotice} />
           <AssignOwner persona={persona} onNotice={setNotice} />
         </div>
         <div>
@@ -54,26 +54,26 @@ export default function App() {
   )
 }
 
-function Spawn({ persona, onNotice }) {
+function CreateVehicle({ persona, onNotice }) {
   const [vin, setVin] = useState('')
   const [model, setModel] = useState('Demo EV')
   const [busy, setBusy] = useState(false)
   async function run() {
     setBusy(true)
     try {
-      const v = await api.spawn(persona, vin.trim(), model.trim())
-      onNotice({ type: 'ok', text: `Spawned ${v.vin} (claim code ${v.claim_code}) as ${persona}.` })
+      const v = await api.createVehicle(persona, vin.trim(), model.trim())
+      onNotice({ type: 'ok', text: `Created ${v.vin} (claim code ${v.claim_code}) as ${persona}.` })
       setVin('')
     } catch (e) {
-      onNotice({ type: 'err', text: `Spawn denied (${persona}): ${e.message}` })
+      onNotice({ type: 'err', text: `Create denied (${persona}): ${e.message}` })
     } finally { setBusy(false) }
   }
   return (
     <div className="card">
-      <h2>Spawn vehicle <span className="muted">(manufacturing)</span></h2>
+      <h2>Create vehicle <span className="muted">(manufacturing)</span></h2>
       <input placeholder="VIN (blank = auto)" value={vin} onChange={(e) => setVin(e.target.value)} />
       <input placeholder="model" value={model} onChange={(e) => setModel(e.target.value)} />
-      <button disabled={busy} onClick={run}>Spawn</button>
+      <button disabled={busy} onClick={run}>Create</button>
     </div>
   )
 }
@@ -116,7 +116,7 @@ function Vehicles({ persona, onNotice }) {
   return (
     <div className="card">
       <h2>Fleet <button className="ghost" onClick={load}>↻</button></h2>
-      {vehicles.length === 0 && <p className="muted">No vehicles. Spawn one as manufacturing.</p>}
+      {vehicles.length === 0 && <p className="muted">No vehicles. Create one as manufacturing.</p>}
       <table className="states">
         <thead><tr><th>VIN</th><th>id</th><th>lifecycle</th><th>claim code</th><th>conn.</th></tr></thead>
         <tbody>

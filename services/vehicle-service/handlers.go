@@ -92,9 +92,9 @@ func newCode(n int) string {
 	return strings.ToUpper(hex.EncodeToString(b))
 }
 
-// ---- staff: spawn ----
+// ---- staff: create ----
 
-func (a *App) handleSpawn(w http.ResponseWriter, r *http.Request) {
+func (a *App) handleCreate(w http.ResponseWriter, r *http.Request) {
 	sub, ok := staffSubject(r)
 	if !ok {
 		httpx.WriteError(w, http.StatusUnauthorized, "valid X-Staff-Persona required")
@@ -108,9 +108,9 @@ func (a *App) handleSpawn(w http.ResponseWriter, r *http.Request) {
 	if req.Model == "" {
 		req.Model = "Demo EV"
 	}
-	dec := CanSpawnVehicle(sub)
+	dec := CanCreateVehicle(sub)
 	if !dec.Allowed {
-		a.emit(r, models.ActorStaff, sub.Persona, "spawn_vehicle", req.VIN, dec, nil)
+		a.emit(r, models.ActorStaff, sub.Persona, "create_vehicle", req.VIN, dec, nil)
 		httpx.WriteError(w, http.StatusForbidden, dec.Reason)
 		return
 	}
@@ -122,12 +122,12 @@ func (a *App) handleSpawn(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	claimCode := newCode(3)
-	v, err := a.store.Spawn(r.Context(), req.VIN, req.Model, claimCode)
+	v, err := a.store.Create(r.Context(), req.VIN, req.Model, claimCode)
 	if err != nil {
 		httpx.WriteError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	a.emit(r, models.ActorStaff, sub.Persona, "spawn_vehicle", v.ID, dec,
+	a.emit(r, models.ActorStaff, sub.Persona, "create_vehicle", v.ID, dec,
 		map[string]any{"vin": v.VIN, "claim_code": v.ClaimCode})
 	httpx.WriteJSON(w, http.StatusCreated, v)
 }
