@@ -19,6 +19,7 @@ type Verifier struct {
 	jwksURL string
 	issuer  string
 	client  *http.Client
+	static  bool // when true, keys are fixed in memory and never refreshed over HTTP
 
 	mu      sync.RWMutex
 	keys    map[string]ed25519.PublicKey
@@ -34,6 +35,17 @@ func NewVerifier(jwksURL, issuer string) *Verifier {
 		client:  &http.Client{Timeout: 5 * time.Second},
 		keys:    map[string]ed25519.PublicKey{},
 	}
+}
+
+// NewStaticVerifier returns a Verifier backed by fixed in-memory keys. It is used
+// when a service verifies tokens signed by a key it already holds (e.g. an issuer
+// verifying its own tokens), avoiding a self-directed JWKS HTTP call.
+func NewStaticVerifier(issuer string, keys map[string]ed25519.PublicKey) *Verifier {
+	cp := make(map[string]ed25519.PublicKey, len(keys))
+	for k, v := range keys {
+		cp[k] = v
+	}
+	return &Verifier{issuer: issuer, static: true, keys: cp}
 }
 
 // Verify checks signature, issuer, audience, expiry and (optionally) scope.
@@ -66,8 +78,11 @@ func (v *Verifier) publicKey(ctx context.Context, kid string) (ed25519.PublicKey
 	key, ok := v.keys[kid]
 	stale := time.Since(v.fetched) > time.Minute
 	v.mu.RUnlock()
-	if ok && !stale {
+	if ok && (!stale || v.static) {
 		return key, nil
+	}
+	if v.static {
+		return nil, fmt.Errorf("unknown key id %q", kid)
 	}
 	if err := v.refresh(ctx); err != nil && !ok {
 		return nil, err

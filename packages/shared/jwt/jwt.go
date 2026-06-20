@@ -99,6 +99,12 @@ func (i *Issuer) JWKS() JWKS {
 	}}}
 }
 
+// PublicKeys returns the issuer's public keys indexed by key id, for constructing
+// a static verifier that validates this issuer's own tokens locally.
+func (i *Issuer) PublicKeys() map[string]ed25519.PublicKey {
+	return map[string]ed25519.PublicKey{i.keyID: i.public}
+}
+
 func keyID(pub ed25519.PublicKey) string {
 	sum := sha256.Sum256(pub)
 	return base64.RawURLEncoding.EncodeToString(sum[:8])

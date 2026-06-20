@@ -15,6 +15,7 @@ import (
 	"vehicle-identity-demo/packages/shared/httpx"
 	sjwt "vehicle-identity-demo/packages/shared/jwt"
 	"vehicle-identity-demo/packages/shared/middleware"
+	"vehicle-identity-demo/packages/shared/models"
 )
 
 //go:embed schema.sql
@@ -54,6 +55,12 @@ func main() {
 
 	app := &App{store: store, web: web, ceremony: newCeremonyStore(), issuer: issuer}
 
+	// identity-service verifies its own tokens (issued for audience identity-service)
+	// locally from the issuer's public key, so the factory provisioning endpoint can
+	// be JWT-protected without a self-directed JWKS HTTP call.
+	verifier := sjwt.NewStaticVerifier(env("JWT_ISSUER", "vehicle-demo.identity-service"), issuer.PublicKeys())
+	requireProvision := middleware.RequireScope(verifier, models.AudIdentityService, models.ScopeBootstrapProvision)
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /signup/start", app.handleSignupStart)
 	mux.HandleFunc("POST /signup/finish", app.handleSignupFinish)
@@ -62,6 +69,7 @@ func main() {
 	mux.HandleFunc("POST /step-up/start", app.handleStepUpStart)
 	mux.HandleFunc("POST /step-up/finish", app.handleStepUpFinish)
 	mux.HandleFunc("POST /service-token", app.handleServiceToken)
+	mux.Handle("POST /bootstrap/provision", requireProvision(http.HandlerFunc(app.handleProvisionBootstrap)))
 	mux.HandleFunc("GET /.well-known/jwks.json", app.handleJWKS)
 	mux.HandleFunc("GET /me", app.handleMe)
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
@@ -86,12 +94,23 @@ func selfSeed(ctx context.Context, store *Store) error {
 	); err != nil {
 		return err
 	}
-	return store.UpsertServiceIdentity(ctx,
+	if err := store.UpsertServiceIdentity(ctx,
 		env("VEHICLE_SERVICE_CLIENT_ID", "vehicle-service"),
 		env("VEHICLE_SERVICE_CLIENT_SECRET", "vehicle-service-secret"),
 		"service:vehicle-service",
 		"audit.write audit.read",
 		"audit-service",
+	); err != nil {
+		return err
+	}
+	// The vehicle factory workload mints bootstrap.provision tokens (audience
+	// identity-service) so the fleet simulator can burn in device credentials.
+	return store.UpsertServiceIdentity(ctx,
+		env("FACTORY_CLIENT_ID", "vehicle-factory"),
+		env("FACTORY_CLIENT_SECRET", "vehicle-factory-secret"),
+		"service:vehicle-factory",
+		"bootstrap.provision",
+		"identity-service",
 	)
 }
 

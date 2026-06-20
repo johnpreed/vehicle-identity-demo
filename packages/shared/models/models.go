@@ -3,16 +3,18 @@ package models
 
 // Service-to-service JWT scopes.
 const (
-	ScopeAuditWrite       = "audit.write"
-	ScopeAuditRead        = "audit.read"
-	ScopeVehicleRegister  = "vehicle.register"
-	ScopeVehicleHeartbeat = "vehicle.heartbeat"
+	ScopeAuditWrite         = "audit.write"
+	ScopeAuditRead          = "audit.read"
+	ScopeVehicleRegister    = "vehicle.register"
+	ScopeVehicleHeartbeat   = "vehicle.heartbeat"
+	ScopeBootstrapProvision = "bootstrap.provision"
 )
 
 // JWT audiences (the service that consumes the token).
 const (
-	AudAuditService   = "audit-service"
-	AudVehicleService = "vehicle-service"
+	AudAuditService    = "audit-service"
+	AudVehicleService  = "vehicle-service"
+	AudIdentityService = "identity-service"
 )
 
 // Staff personas.

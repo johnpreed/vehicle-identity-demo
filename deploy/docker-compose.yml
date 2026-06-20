@@ -40,6 +40,8 @@ services:
       SIM_BOOTSTRAP_SECRET: ${SIM_BOOTSTRAP_SECRET:-bootstrap-demo-secret}
       VEHICLE_SERVICE_CLIENT_ID: ${VEHICLE_SERVICE_CLIENT_ID:-vehicle-service}
       VEHICLE_SERVICE_CLIENT_SECRET: ${VEHICLE_SERVICE_CLIENT_SECRET:-vehicle-service-secret}
+      FACTORY_CLIENT_ID: ${FACTORY_CLIENT_ID:-vehicle-factory}
+      FACTORY_CLIENT_SECRET: ${FACTORY_CLIENT_SECRET:-vehicle-factory-secret}
     ports:
       - "8081:8081"
     depends_on:
@@ -109,7 +111,9 @@ services:
       VEHICLE_URL: http://vehicle-service:8082
       SIM_VIN: ${SIM_VIN:-VIN-DEMO-0001}
       SIM_BOOTSTRAP_SECRET: ${SIM_BOOTSTRAP_SECRET:-bootstrap-demo-secret}
-      HEARTBEAT_INTERVAL: 15s
+      FACTORY_CLIENT_ID: ${FACTORY_CLIENT_ID:-vehicle-factory}
+      FACTORY_CLIENT_SECRET: ${FACTORY_CLIENT_SECRET:-vehicle-factory-secret}
+      RECONCILE_INTERVAL: 8s
     ports:
       - "8084:8084"
     depends_on:

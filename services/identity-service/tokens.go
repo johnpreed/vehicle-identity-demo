@@ -7,6 +7,26 @@ import (
 	"vehicle-identity-demo/packages/shared/httpx"
 )
 
+// handleProvisionBootstrap registers (or rotates) a vehicle's factory bootstrap
+// credential. It models the manufacturing "burn-in" step: a trusted factory
+// workload presents a JWT scoped `bootstrap.provision` (audience identity-service)
+// and registers the VIN + device secret the vehicle will later use to call home.
+func (a *App) handleProvisionBootstrap(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		VIN    string `json:"vin"`
+		Secret string `json:"bootstrap_secret"`
+	}
+	if err := httpx.ReadJSON(r, &req); err != nil || req.VIN == "" || req.Secret == "" {
+		httpx.WriteError(w, http.StatusBadRequest, "vin and bootstrap_secret required")
+		return
+	}
+	if err := a.store.UpsertBootstrapCredential(r.Context(), req.VIN, req.Secret); err != nil {
+		httpx.WriteError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	httpx.WriteJSON(w, http.StatusCreated, map[string]string{"vin": req.VIN, "status": "provisioned"})
+}
+
 // handleJWKS publishes the issuer's Ed25519 public key for service-to-service verification.
 func (a *App) handleJWKS(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, a.issuer.JWKS())

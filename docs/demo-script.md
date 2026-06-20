@@ -19,26 +19,28 @@ Open the two UIs:
 - **Consumer web:** http://localhost:5173
 - **Staff web:** http://localhost:5174
 
-The simulated vehicle (`VIN-DEMO-0001`) boots immediately and starts *calling home*, but registration is
-**rejected** until manufacturing spawns the vehicle. You can watch it at http://localhost:8084/.
+The `simulated-vehicle` service runs as a **fleet simulator**: it watches for vehicles that manufacturing
+spawns and brings each one's device online automatically. You can watch the fleet at http://localhost:8084/.
 
 ---
 
 ## Flow 1 — Manufacturing (workload identity)
 
 1. In **staff-web**, keep the **Manufacturing Operator** persona selected.
-2. Under **Spawn vehicle**, type **`VIN-DEMO-0001`** (the VIN the simulated vehicle is provisioned with),
-   then click **Spawn**.
+2. Under **Spawn vehicle**, either type a VIN such as **`VIN-DEMO-0001`** or **leave it blank** to
+   auto-generate one, then click **Spawn**.
    - Result: vehicle is created as `MANUFACTURED` and a **claim code** is shown — note it.
-3. Within ~5 seconds the **simulated vehicle** exchanges its VIN + factory bootstrap secret for a
-   short-lived JWT and registers. Click **↻** on the **Fleet** card:
+3. Within ~5–10 seconds the **fleet simulator** discovers the new vehicle, provisions its bootstrap
+   credential ("factory burn-in"), exchanges VIN + secret for a short-lived JWT, and registers it. Click
+   **↻** on the **Fleet** card:
    - `lifecycle = CLAIMABLE`, `connectivity = ONLINE`.
 4. Switch persona to **Security Auditor**, scroll to **Audit logs**, click **Search**:
    - You'll see `spawn_vehicle` (actor `staff:manufacturing`, ALLOW) and `register_vehicle`
-     (actor `vehicle:service:simulated-vehicle:VIN-DEMO-0001`, ALLOW) sharing a correlation trail.
+     (actor `vehicle:service:simulated-vehicle:<VIN>`, ALLOW) sharing a correlation trail.
 
 > What was demonstrated: a workload (the vehicle) authenticating with a factory credential, receiving a
-> short-lived JWT, and registering — all audited.
+> short-lived JWT, and registering — all audited. This works for **any** spawned vehicle, not just the
+> seeded demo VIN.
 
 If you prefer to skip the manual spawn, run `make seed` instead (spawns the demo vehicle for you).
 

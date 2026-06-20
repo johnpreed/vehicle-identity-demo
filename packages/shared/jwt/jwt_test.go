@@ -112,3 +112,25 @@ func signWith(iss *Issuer, rc gojwt.RegisteredClaims, scope string) string {
 	s, _ := tok.SignedString(iss.private)
 	return s
 }
+
+func TestStaticVerifier(t *testing.T) {
+	iss, _ := NewIssuer("vehicle-demo.identity-service")
+	// A static verifier validates the issuer's own tokens with no HTTP/JWKS call.
+	v := NewStaticVerifier("vehicle-demo.identity-service", iss.PublicKeys())
+
+	token, _ := iss.Issue("service:vehicle-factory", "identity-service", "bootstrap.provision")
+	claims, err := v.Verify(context.Background(), token, "identity-service", "bootstrap.provision")
+	if err != nil {
+		t.Fatalf("static verifier rejected valid token: %v", err)
+	}
+	if claims.Subject != "service:vehicle-factory" {
+		t.Errorf("sub = %q", claims.Subject)
+	}
+
+	// A token signed by a different (unknown) key must be rejected without refresh.
+	other, _ := NewIssuer("vehicle-demo.identity-service")
+	foreign, _ := other.Issue("service:x", "identity-service", "bootstrap.provision")
+	if _, err := v.Verify(context.Background(), foreign, "identity-service", "bootstrap.provision"); err == nil {
+		t.Error("static verifier accepted a token signed by an unknown key")
+	}
+}
