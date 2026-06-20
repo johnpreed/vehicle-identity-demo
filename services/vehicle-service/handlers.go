@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"strings"
 
+	auditclient "vehicle-identity-demo/packages/clients/audit"
+	identityclient "vehicle-identity-demo/packages/clients/identity"
 	"vehicle-identity-demo/packages/shared/httpx"
 	"vehicle-identity-demo/packages/shared/models"
 )
@@ -15,8 +17,8 @@ const resourceVehicle = "vehicle"
 // App holds vehicle-service dependencies.
 type App struct {
 	store    *Store
-	identity *IdentityClient
-	audit    *AuditClient
+	identity *identityclient.Client
+	audit    *auditclient.Client
 }
 
 func validPersona(p string) bool {
@@ -37,7 +39,7 @@ func staffSubject(r *http.Request) (Subject, bool) {
 }
 
 // consumer introspects the session cookie via identity-service.
-func (a *App) consumer(r *http.Request) (*MeResult, bool) {
+func (a *App) consumer(r *http.Request) (*identityclient.Session, bool) {
 	c, err := r.Cookie("vid_session")
 	if err != nil {
 		return nil, false
@@ -50,7 +52,7 @@ func (a *App) consumer(r *http.Request) (*MeResult, bool) {
 }
 
 // consumerSubject builds a consumer Subject including their role on the vehicle.
-func (a *App) consumerSubject(r *http.Request, vehicleID string) (Subject, *MeResult, bool) {
+func (a *App) consumerSubject(r *http.Request, vehicleID string) (Subject, *identityclient.Session, bool) {
 	me, ok := a.consumer(r)
 	if !ok {
 		return Subject{}, nil, false

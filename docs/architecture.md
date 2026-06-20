@@ -38,6 +38,14 @@ staff-web (5174) ──X-Staff-Persona──▶ vehicle-service / audit-service
 Each service owns its own Postgres database (`identity`, `vehicle`, `audit`); services never share tables
 and only communicate over HTTP.
 
+Inter-service HTTP calls go through small shared **client libraries** under `packages/clients/` rather than
+being hand-rolled in each service:
+- `clients/identity` — workload token issuance (`ServiceToken`/`BootstrapToken`, with a `CachedToken`
+  helper), factory bootstrap provisioning, and consumer session introspection (`/me`).
+- `clients/audit` — writing audit events, with a pluggable token provider so vehicle-service (HTTP token)
+  and identity-service (self-issued token) share one implementation.
+- `clients/vehicle` — device register/heartbeat and fleet listing.
+
 ## Why JWTs for service-to-service instead of HMAC
 
 Service-to-service calls are authenticated with **short-lived (5-minute) Ed25519-signed JWTs**, verified

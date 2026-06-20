@@ -32,7 +32,7 @@ func (a *App) auditTokenEvent(r *http.Request, actorType, actorID, audience, det
 	}
 	meta["issuer"] = issuerPrincipal
 	corr := httpx.CorrelationID(r.Context())
-	go a.audit.emit(context.Background(), corr, models.AuditEvent{
+	go a.audit.Emit(context.Background(), corr, models.AuditEvent{
 		ActorType:    actorType,
 		ActorID:      actorID,
 		Action:       "service_token_issued",
@@ -66,7 +66,7 @@ func (a *App) handleProvisionBootstrap(w http.ResponseWriter, r *http.Request) {
 		actor = claims.Subject
 	}
 	corr := httpx.CorrelationID(r.Context())
-	go a.audit.emit(context.Background(), corr, models.AuditEvent{
+	go a.audit.Emit(context.Background(), corr, models.AuditEvent{
 		ActorType:    models.ActorService,
 		ActorID:      actor,
 		Action:       "bootstrap_provisioned",

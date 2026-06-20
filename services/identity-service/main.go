@@ -11,6 +11,7 @@ import (
 
 	"github.com/go-webauthn/webauthn/webauthn"
 
+	auditclient "vehicle-identity-demo/packages/clients/audit"
 	"vehicle-identity-demo/packages/shared/db"
 	"vehicle-identity-demo/packages/shared/httpx"
 	sjwt "vehicle-identity-demo/packages/shared/jwt"
@@ -53,13 +54,18 @@ func main() {
 		log.Fatalf("seed: %v", err)
 	}
 
-	audit := newAuditEmitter(issuer, env("AUDIT_URL", "http://audit-service:8083"))
-	app := &App{store: store, web: web, ceremony: newCeremonyStore(), issuer: issuer, audit: audit}
+	// identity-service writes audit events using its own signing key: it self-issues
+	// the audit.write token directly (no HTTP, no recursion into service_token_issued).
+	auditClient := auditclient.New(env("AUDIT_URL", "http://audit-service:8083"),
+		func(c context.Context) (string, error) {
+			return issuer.Issue("service:identity-service", models.AudAuditService, models.ScopeAuditWrite)
+		})
+	app := &App{store: store, web: web, ceremony: newCeremonyStore(), issuer: issuer, audit: auditClient}
 
 	// Record the signing key's "birth" so key lifecycle is visible in the audit log.
 	// A restart generates a new key and emits a fresh event (a key roll). This runs
 	// in the background and retries because audit-service may still be starting.
-	go audit.emitWithRetry(context.Background(), httpx.NewCorrelationID(), models.AuditEvent{
+	go auditClient.EmitWithRetry(context.Background(), httpx.NewCorrelationID(), models.AuditEvent{
 		ActorType:    models.ActorService,
 		ActorID:      "service:identity-service",
 		Action:       "signing_key_generated",
@@ -85,7 +91,7 @@ func main() {
 	mux.HandleFunc("POST /step-up/finish", app.handleStepUpFinish)
 	mux.HandleFunc("POST /service-token", app.handleServiceToken)
 	mux.Handle("POST /bootstrap/provision", requireProvision(http.HandlerFunc(app.handleProvisionBootstrap)))
-	mux.HandleFunc("GET /.well-known/jwks.json", app.handleJWKS)
+	mux.HandleFunc("GET "+sjwt.JWKSPath, app.handleJWKS)
 	mux.HandleFunc("GET /me", app.handleMe)
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, map[string]string{"status": "ok"})

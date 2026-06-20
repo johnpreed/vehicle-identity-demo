@@ -26,6 +26,9 @@ type Verifier struct {
 	fetched time.Time
 }
 
+// JWKSPath is the conventional path where an issuer publishes its JWKS.
+const JWKSPath = "/.well-known/jwks.json"
+
 // NewVerifier returns a Verifier that fetches keys from jwksURL and requires the
 // given issuer on every token.
 func NewVerifier(jwksURL, issuer string) *Verifier {
@@ -35,6 +38,12 @@ func NewVerifier(jwksURL, issuer string) *Verifier {
 		client:  &http.Client{Timeout: 5 * time.Second},
 		keys:    map[string]ed25519.PublicKey{},
 	}
+}
+
+// NewVerifierForIdentity returns a Verifier that fetches keys from an identity
+// service's JWKS endpoint (identityBaseURL + JWKSPath).
+func NewVerifierForIdentity(identityBaseURL, issuer string) *Verifier {
+	return NewVerifier(identityBaseURL+JWKSPath, issuer)
 }
 
 // NewStaticVerifier returns a Verifier backed by fixed in-memory keys. It is used

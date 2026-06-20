@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"vehicle-identity-demo/packages/clients/audit"
+	identityclient "vehicle-identity-demo/packages/clients/identity"
 	"vehicle-identity-demo/packages/shared/db"
 	"vehicle-identity-demo/packages/shared/httpx"
 	sjwt "vehicle-identity-demo/packages/shared/jwt"
@@ -34,16 +36,22 @@ func main() {
 	identityURL := env("IDENTITY_URL", "http://identity-service:8081")
 	auditURL := env("AUDIT_URL", "http://audit-service:8083")
 
+	// vehicle-service writes audit events using a cached audit.write token obtained
+	// from identity-service with its own workload credentials.
+	idClient := identityclient.New(identityURL)
+	clientID := env("VEHICLE_SERVICE_CLIENT_ID", "vehicle-service")
+	clientSecret := env("VEHICLE_SERVICE_CLIENT_SECRET", "vehicle-service-secret")
+	auditToken := identityclient.NewCachedToken(func(c context.Context) (identityclient.Token, error) {
+		return idClient.ServiceToken(c, clientID, clientSecret, models.AudAuditService, models.ScopeAuditWrite)
+	})
+
 	app := &App{
 		store:    &Store{pool: pool},
-		identity: NewIdentityClient(identityURL),
-		audit: NewAuditClient(identityURL, auditURL,
-			env("VEHICLE_SERVICE_CLIENT_ID", "vehicle-service"),
-			env("VEHICLE_SERVICE_CLIENT_SECRET", "vehicle-service-secret")),
+		identity: idClient,
+		audit:    audit.New(auditURL, auditToken.Value),
 	}
 
-	jwksURL := identityURL + "/.well-known/jwks.json"
-	verifier := sjwt.NewVerifier(jwksURL, env("JWT_ISSUER", "vehicle-demo.identity-service"))
+	verifier := sjwt.NewVerifierForIdentity(identityURL, env("JWT_ISSUER", "vehicle-demo.identity-service"))
 	requireRegister := middleware.RequireScope(verifier, models.AudVehicleService, models.ScopeVehicleRegister)
 	requireHeartbeat := middleware.RequireScope(verifier, models.AudVehicleService, models.ScopeVehicleHeartbeat)
 

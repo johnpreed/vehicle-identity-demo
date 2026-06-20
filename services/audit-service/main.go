@@ -35,8 +35,7 @@ func main() {
 	}
 	app := &App{store: &Store{pool: pool}}
 
-	jwksURL := env("IDENTITY_URL", "http://identity-service:8081") + "/.well-known/jwks.json"
-	verifier := sjwt.NewVerifier(jwksURL, env("JWT_ISSUER", "vehicle-demo.identity-service"))
+	verifier := sjwt.NewVerifierForIdentity(env("IDENTITY_URL", "http://identity-service:8081"), env("JWT_ISSUER", "vehicle-demo.identity-service"))
 	requireWrite := middleware.RequireScope(verifier, models.AudAuditService, models.ScopeAuditWrite)
 
 	mux := http.NewServeMux()

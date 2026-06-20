@@ -11,6 +11,7 @@ import (
 	"github.com/go-webauthn/webauthn/webauthn"
 	"github.com/google/uuid"
 
+	"vehicle-identity-demo/packages/clients/audit"
 	"vehicle-identity-demo/packages/shared/httpx"
 	sjwt "vehicle-identity-demo/packages/shared/jwt"
 )
@@ -23,7 +24,7 @@ type App struct {
 	web      *webauthn.WebAuthn
 	ceremony *ceremonyStore
 	issuer   *sjwt.Issuer
-	audit    *auditEmitter
+	audit    *audit.Client
 }
 
 func (a *App) loadWAUser(r *http.Request, userID string) (*waUser, error) {

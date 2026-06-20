@@ -5,15 +5,14 @@
 // bootstrap secret for a short-lived JWT, registers the device, and heartbeats.
 //
 // The seeded device (SIM_VIN) keeps its pre-provisioned env secret; every other VIN
-// the simulator discovers is burned in on the fly.
+// the simulator discovers is burned in on the fly. All inter-service calls go through
+// the shared identity/vehicle client libraries.
 package main
 
 import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
-	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -21,7 +20,10 @@ import (
 	"sync"
 	"time"
 
+	identityclient "vehicle-identity-demo/packages/clients/identity"
+	vehicleclient "vehicle-identity-demo/packages/clients/vehicle"
 	"vehicle-identity-demo/packages/shared/httpx"
+	"vehicle-identity-demo/packages/shared/models"
 )
 
 // device is the simulator's per-VIN state.
@@ -29,37 +31,40 @@ type device struct {
 	vin        string
 	secret     string
 	vehicleID  string
-	token      string
-	tokenExp   time.Time
+	token      *identityclient.CachedToken // per-device bootstrap token
 	registered bool
 	lastBeat   time.Time
 	lastError  string
 }
 
 type fleet struct {
-	identityURL   string
-	vehicleURL    string
-	seedVIN       string
-	seedSecret    string
-	factoryID     string
-	factorySecret string
-	interval      time.Duration
+	identity     *identityclient.Client
+	vehicle      *vehicleclient.Client
+	seedVIN      string
+	seedSecret   string
+	factoryToken *identityclient.CachedToken // factory workload token (bootstrap.provision)
+	interval     time.Duration
 
 	mu      sync.Mutex
 	devices map[string]*device
 }
 
 func main() {
+	idc := identityclient.New(env("IDENTITY_URL", "http://identity-service:8081"))
+	factoryID := env("FACTORY_CLIENT_ID", "vehicle-factory")
+	factorySecret := env("FACTORY_CLIENT_SECRET", "vehicle-factory-secret")
+
 	f := &fleet{
-		identityURL:   env("IDENTITY_URL", "http://identity-service:8081"),
-		vehicleURL:    env("VEHICLE_URL", "http://vehicle-service:8082"),
-		seedVIN:       env("SIM_VIN", "VIN-DEMO-0001"),
-		seedSecret:    env("SIM_BOOTSTRAP_SECRET", "bootstrap-demo-secret"),
-		factoryID:     env("FACTORY_CLIENT_ID", "vehicle-factory"),
-		factorySecret: env("FACTORY_CLIENT_SECRET", "vehicle-factory-secret"),
-		interval:      durationEnv("RECONCILE_INTERVAL", 8*time.Second),
-		devices:       map[string]*device{},
+		identity:   idc,
+		vehicle:    vehicleclient.New(env("VEHICLE_URL", "http://vehicle-service:8082")),
+		seedVIN:    env("SIM_VIN", "VIN-DEMO-0001"),
+		seedSecret: env("SIM_BOOTSTRAP_SECRET", "bootstrap-demo-secret"),
+		interval:   durationEnv("RECONCILE_INTERVAL", 8*time.Second),
+		devices:    map[string]*device{},
 	}
+	f.factoryToken = identityclient.NewCachedToken(func(ctx context.Context) (identityclient.Token, error) {
+		return idc.ServiceToken(ctx, factoryID, factorySecret, models.AudIdentityService, models.ScopeBootstrapProvision)
+	})
 
 	go f.run()
 
@@ -86,7 +91,8 @@ func (f *fleet) run() {
 // the rest. Discovery uses the manufacturing persona: the simulator is the
 // manufacturer's device fleet gateway.
 func (f *fleet) reconcile(ctx context.Context) {
-	vehicles, err := f.listVehicles(ctx)
+	dctx := httpx.WithCorrelationID(ctx, httpx.NewCorrelationID())
+	vehicles, err := f.vehicle.List(dctx, models.PersonaManufacturing)
 	if err != nil {
 		log.Printf("[fleet] discovery error: %v", err)
 		return
@@ -113,135 +119,70 @@ func (f *fleet) reconcile(ctx context.Context) {
 // correlation id so it can be traced end to end in the audit log.
 func (f *fleet) bringOnline(ctx context.Context, d *device) {
 	corr := httpx.NewCorrelationID()
+	ctx = httpx.WithCorrelationID(ctx, corr)
+
 	if d.secret == "" {
 		if d.vin == f.seedVIN && f.seedSecret != "" {
 			d.secret = f.seedSecret // pre-provisioned seeded device
-		} else {
-			secret := newSecret()
-			if err := f.provision(ctx, corr, d.vin, secret); err != nil {
-				d.lastError = "provision: " + err.Error()
-				log.Printf("[fleet] %s provision error: %v", d.vin, err)
-				return
-			}
-			d.secret = secret
-			log.Printf("[fleet] %s burned in (factory provisioning)", d.vin)
+		} else if !f.burnIn(ctx, d) {
+			return
 		}
 	}
-	token, err := f.deviceToken(ctx, corr, d)
+	if d.token == nil {
+		d.token = identityclient.NewCachedToken(func(c context.Context) (identityclient.Token, error) {
+			return f.identity.BootstrapToken(c, d.vin, d.secret, models.AudVehicleService)
+		})
+	}
+	bearer, err := d.token.Value(ctx)
 	if err != nil {
 		d.lastError = "bootstrap token: " + err.Error()
 		return
 	}
-	var out struct {
-		ID string `json:"id"`
-	}
-	if _, err := httpx.PostJSON(ctx, f.vehicleURL+"/vehicles/register", token, corr,
-		map[string]string{"vin": d.vin}, &out); err != nil {
+	v, err := f.vehicle.Register(ctx, bearer, corr, d.vin)
+	if err != nil {
 		d.lastError = "register: " + err.Error()
 		log.Printf("[fleet] %s register not ready: %v", d.vin, err)
 		return
 	}
-	d.vehicleID = out.ID
+	d.vehicleID = v.ID
 	d.registered = true
 	d.lastError = ""
 	log.Printf("[fleet] %s registered as %s", d.vin, d.vehicleID)
 }
 
+// burnIn provisions a fresh bootstrap credential for a non-seeded VIN using a
+// factory workload token. Returns true on success.
+func (f *fleet) burnIn(ctx context.Context, d *device) bool {
+	factoryBearer, err := f.factoryToken.Value(ctx)
+	if err != nil {
+		d.lastError = "factory token: " + err.Error()
+		return false
+	}
+	secret := newSecret()
+	if err := f.identity.ProvisionBootstrap(ctx, factoryBearer, d.vin, secret); err != nil {
+		d.lastError = "provision: " + err.Error()
+		log.Printf("[fleet] %s provision error: %v", d.vin, err)
+		return false
+	}
+	d.secret = secret
+	log.Printf("[fleet] %s burned in (factory provisioning)", d.vin)
+	return true
+}
+
 func (f *fleet) heartbeat(ctx context.Context, d *device) {
 	corr := httpx.NewCorrelationID()
-	token, err := f.deviceToken(ctx, corr, d)
+	ctx = httpx.WithCorrelationID(ctx, corr)
+	bearer, err := d.token.Value(ctx)
 	if err != nil {
 		d.lastError = "heartbeat token: " + err.Error()
 		return
 	}
-	if _, err := httpx.PostJSON(ctx, f.vehicleURL+"/vehicles/"+d.vehicleID+"/heartbeat", token, corr, nil, nil); err != nil {
+	if err := f.vehicle.Heartbeat(ctx, bearer, corr, d.vehicleID); err != nil {
 		d.lastError = "heartbeat: " + err.Error()
 		return
 	}
 	d.lastBeat = time.Now()
 	d.lastError = ""
-}
-
-// ---- identity-service interactions ----
-
-// deviceToken exchanges the device's VIN + bootstrap secret for a short-lived JWT.
-func (f *fleet) deviceToken(ctx context.Context, corr string, d *device) (string, error) {
-	if d.token != "" && time.Now().Before(d.tokenExp.Add(-1*time.Minute)) {
-		return d.token, nil
-	}
-	var out struct {
-		Token string `json:"token"`
-	}
-	body := map[string]string{
-		"grant_type":       "vehicle_bootstrap",
-		"vin":              d.vin,
-		"bootstrap_secret": d.secret,
-		"audience":         "vehicle-service",
-	}
-	if _, err := httpx.PostJSON(ctx, f.identityURL+"/service-token", "", corr, body, &out); err != nil {
-		return "", err
-	}
-	d.token = out.Token
-	d.tokenExp = time.Now().Add(5 * time.Minute)
-	return d.token, nil
-}
-
-// provision burns in a bootstrap credential using a factory workload token.
-func (f *fleet) provision(ctx context.Context, corr, vin, secret string) error {
-	token, err := f.factoryToken(ctx, corr)
-	if err != nil {
-		return err
-	}
-	_, err = httpx.PostJSON(ctx, f.identityURL+"/bootstrap/provision", token, corr,
-		map[string]string{"vin": vin, "bootstrap_secret": secret}, nil)
-	return err
-}
-
-func (f *fleet) factoryToken(ctx context.Context, corr string) (string, error) {
-	var out struct {
-		Token string `json:"token"`
-	}
-	body := map[string]string{
-		"grant_type":    "service_credential",
-		"client_id":     f.factoryID,
-		"client_secret": f.factorySecret,
-		"audience":      "identity-service",
-		"scope":         "bootstrap.provision",
-	}
-	if _, err := httpx.PostJSON(ctx, f.identityURL+"/service-token", "", corr, body, &out); err != nil {
-		return "", err
-	}
-	return out.Token, nil
-}
-
-// ---- vehicle-service interactions ----
-
-type vehicleSummary struct {
-	VIN string `json:"vin"`
-}
-
-// listVehicles fetches the fleet from vehicle-service using the manufacturing persona.
-func (f *fleet) listVehicles(ctx context.Context) ([]vehicleSummary, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, f.vehicleURL+"/vehicles", nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("X-Staff-Persona", "manufacturing")
-	resp, err := (&http.Client{Timeout: 5 * time.Second}).Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("list vehicles returned %d", resp.StatusCode)
-	}
-	var body struct {
-		Vehicles []vehicleSummary `json:"vehicles"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
-		return nil, err
-	}
-	return body.Vehicles, nil
 }
 
 func (f *fleet) handleStatus(w http.ResponseWriter, r *http.Request) {
