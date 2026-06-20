@@ -145,10 +145,12 @@ function AuditLogs({ persona, onNotice }) {
   const [rows, setRows] = useState([])
   const [resourceId, setResourceId] = useState('')
   const [loaded, setLoaded] = useState(false)
+  const [expanded, setExpanded] = useState(null)
   async function load() {
     try {
       const r = await api.searchAudit(persona, { resource_id: resourceId.trim(), limit: 100 })
       setRows(r.results || [])
+      setExpanded(null)
       setLoaded(true)
     } catch (e) {
       setRows([])
@@ -166,18 +168,31 @@ function AuditLogs({ persona, onNotice }) {
       {loaded && rows.length === 0 && <p className="muted">No results (or access denied for this persona).</p>}
       {rows.length > 0 && (
         <table className="states">
-          <thead><tr><th>time</th><th>actor</th><th>action</th><th>decision</th><th>reason</th><th>corr.</th></tr></thead>
+          <thead><tr><th></th><th>time</th><th>actor</th><th>action</th><th>decision</th><th>reason</th><th>corr.</th></tr></thead>
           <tbody>
-            {rows.map((r) => (
-              <tr key={r.id}>
-                <td className="muted small">{new Date(r.created_at).toLocaleTimeString()}</td>
-                <td className="small">{r.actor_type}:{r.actor_id}</td>
-                <td className="mono small">{r.action}</td>
-                <td><span className={'badge ' + (r.decision === 'ALLOW' ? 'ok' : 'deny')}>{r.decision}</span></td>
-                <td className="muted small">{r.reason}</td>
-                <td className="muted mono small">{(r.correlation_id || '').slice(0, 8)}</td>
-              </tr>
-            ))}
+            {rows.map((r) => {
+              const open = expanded === r.id
+              return (
+                <React.Fragment key={r.id}>
+                  <tr className="clickable" onClick={() => setExpanded(open ? null : r.id)}>
+                    <td className="muted">{open ? '▾' : '▸'}</td>
+                    <td className="muted small">{new Date(r.created_at).toLocaleTimeString()}</td>
+                    <td className="small">{r.actor_type}:{r.actor_id}</td>
+                    <td className="mono small">{r.action}</td>
+                    <td><span className={'badge ' + (r.decision === 'ALLOW' ? 'ok' : 'deny')}>{r.decision}</span></td>
+                    <td className="muted small">{r.reason}</td>
+                    <td className="muted mono small" title={r.correlation_id}>{(r.correlation_id || '').slice(0, 8)}…</td>
+                  </tr>
+                  {open && (
+                    <tr className="detailrow">
+                      <td colSpan={7}>
+                        <pre className="json">{JSON.stringify(r, null, 2)}</pre>
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
+              )
+            })}
           </tbody>
         </table>
       )}

@@ -80,6 +80,20 @@ button.ghost { background: transparent; border: 1px solid var(--line); color: va
   vertical-align: middle;
 }
 
+.clickable { cursor: pointer; }
+.clickable:hover td { background: #11152a; }
+.detailrow td { background: #0c0f1d; }
+.json {
+  margin: 0;
+  padding: 12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
 .notice { padding: 10px 12px; border-radius: 8px; margin: 0 0 18px; font-size: 14px; }
 .notice.ok { background: rgba(62,207,142,.14); color: var(--ok); }
 .notice.err { background: rgba(255,107,107,.14); color: var(--err); }

@@ -109,13 +109,16 @@ func (f *fleet) reconcile(ctx context.Context) {
 }
 
 // bringOnline burns in a device credential (if needed) and registers the device.
+// The whole call-home flow (provision -> token -> register) shares one fresh
+// correlation id so it can be traced end to end in the audit log.
 func (f *fleet) bringOnline(ctx context.Context, d *device) {
+	corr := httpx.NewCorrelationID()
 	if d.secret == "" {
 		if d.vin == f.seedVIN && f.seedSecret != "" {
 			d.secret = f.seedSecret // pre-provisioned seeded device
 		} else {
 			secret := newSecret()
-			if err := f.provision(ctx, d.vin, secret); err != nil {
+			if err := f.provision(ctx, corr, d.vin, secret); err != nil {
 				d.lastError = "provision: " + err.Error()
 				log.Printf("[fleet] %s provision error: %v", d.vin, err)
 				return
@@ -124,7 +127,7 @@ func (f *fleet) bringOnline(ctx context.Context, d *device) {
 			log.Printf("[fleet] %s burned in (factory provisioning)", d.vin)
 		}
 	}
-	token, err := f.deviceToken(ctx, d)
+	token, err := f.deviceToken(ctx, corr, d)
 	if err != nil {
 		d.lastError = "bootstrap token: " + err.Error()
 		return
@@ -132,7 +135,7 @@ func (f *fleet) bringOnline(ctx context.Context, d *device) {
 	var out struct {
 		ID string `json:"id"`
 	}
-	if _, err := httpx.PostJSON(ctx, f.vehicleURL+"/vehicles/register", token, "sim-"+d.vin,
+	if _, err := httpx.PostJSON(ctx, f.vehicleURL+"/vehicles/register", token, corr,
 		map[string]string{"vin": d.vin}, &out); err != nil {
 		d.lastError = "register: " + err.Error()
 		log.Printf("[fleet] %s register not ready: %v", d.vin, err)
@@ -145,12 +148,13 @@ func (f *fleet) bringOnline(ctx context.Context, d *device) {
 }
 
 func (f *fleet) heartbeat(ctx context.Context, d *device) {
-	token, err := f.deviceToken(ctx, d)
+	corr := httpx.NewCorrelationID()
+	token, err := f.deviceToken(ctx, corr, d)
 	if err != nil {
 		d.lastError = "heartbeat token: " + err.Error()
 		return
 	}
-	if _, err := httpx.PostJSON(ctx, f.vehicleURL+"/vehicles/"+d.vehicleID+"/heartbeat", token, "sim-"+d.vin, nil, nil); err != nil {
+	if _, err := httpx.PostJSON(ctx, f.vehicleURL+"/vehicles/"+d.vehicleID+"/heartbeat", token, corr, nil, nil); err != nil {
 		d.lastError = "heartbeat: " + err.Error()
 		return
 	}
@@ -161,7 +165,7 @@ func (f *fleet) heartbeat(ctx context.Context, d *device) {
 // ---- identity-service interactions ----
 
 // deviceToken exchanges the device's VIN + bootstrap secret for a short-lived JWT.
-func (f *fleet) deviceToken(ctx context.Context, d *device) (string, error) {
+func (f *fleet) deviceToken(ctx context.Context, corr string, d *device) (string, error) {
 	if d.token != "" && time.Now().Before(d.tokenExp.Add(-1*time.Minute)) {
 		return d.token, nil
 	}
@@ -174,7 +178,7 @@ func (f *fleet) deviceToken(ctx context.Context, d *device) (string, error) {
 		"bootstrap_secret": d.secret,
 		"audience":         "vehicle-service",
 	}
-	if _, err := httpx.PostJSON(ctx, f.identityURL+"/service-token", "", "sim-"+d.vin, body, &out); err != nil {
+	if _, err := httpx.PostJSON(ctx, f.identityURL+"/service-token", "", corr, body, &out); err != nil {
 		return "", err
 	}
 	d.token = out.Token
@@ -183,17 +187,17 @@ func (f *fleet) deviceToken(ctx context.Context, d *device) (string, error) {
 }
 
 // provision burns in a bootstrap credential using a factory workload token.
-func (f *fleet) provision(ctx context.Context, vin, secret string) error {
-	token, err := f.factoryToken(ctx)
+func (f *fleet) provision(ctx context.Context, corr, vin, secret string) error {
+	token, err := f.factoryToken(ctx, corr)
 	if err != nil {
 		return err
 	}
-	_, err = httpx.PostJSON(ctx, f.identityURL+"/bootstrap/provision", token, "sim-"+vin,
+	_, err = httpx.PostJSON(ctx, f.identityURL+"/bootstrap/provision", token, corr,
 		map[string]string{"vin": vin, "bootstrap_secret": secret}, nil)
 	return err
 }
 
-func (f *fleet) factoryToken(ctx context.Context) (string, error) {
+func (f *fleet) factoryToken(ctx context.Context, corr string) (string, error) {
 	var out struct {
 		Token string `json:"token"`
 	}
@@ -204,7 +208,7 @@ func (f *fleet) factoryToken(ctx context.Context) (string, error) {
 		"audience":      "identity-service",
 		"scope":         "bootstrap.provision",
 	}
-	if _, err := httpx.PostJSON(ctx, f.identityURL+"/service-token", "", "sim-factory", body, &out); err != nil {
+	if _, err := httpx.PostJSON(ctx, f.identityURL+"/service-token", "", corr, body, &out); err != nil {
 		return "", err
 	}
 	return out.Token, nil
