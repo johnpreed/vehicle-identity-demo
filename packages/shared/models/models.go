@@ -19,10 +19,9 @@ const (
 
 // Staff personas.
 const (
-	PersonaManufacturing     = "manufacturing"
-	PersonaSalesSupport      = "sales_support"
-	PersonaServiceTechnician = "service_technician"
-	PersonaSecurityAuditor   = "security_auditor"
+	PersonaManufacturing   = "manufacturing"
+	PersonaSalesSupport    = "sales_support"
+	PersonaSecurityAuditor = "security_auditor"
 )
 
 // Consumer vehicle roles.

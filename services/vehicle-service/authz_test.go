@@ -20,7 +20,6 @@ func TestCanViewStatus(t *testing.T) {
 		consumer(models.RoleCoOwner, false),
 		consumer(models.RoleDriver, false),
 		consumer(models.RoleViewer, false),
-		staff(models.PersonaServiceTechnician),
 	}
 	for _, s := range allowed {
 		if d := CanViewStatus(s); !d.Allowed {
@@ -31,6 +30,7 @@ func TestCanViewStatus(t *testing.T) {
 		consumer("", false),
 		staff(models.PersonaManufacturing),
 		staff(models.PersonaSalesSupport),
+		staff(models.PersonaSecurityAuditor),
 	}
 	for _, s := range denied {
 		if d := CanViewStatus(s); d.Allowed {
@@ -48,7 +48,7 @@ func TestCanUnlockAndClimate(t *testing.T) {
 			t.Errorf("CanStartClimate(%s) = deny, want allow", role)
 		}
 	}
-	for _, s := range []Subject{consumer(models.RoleViewer, false), staff(models.PersonaServiceTechnician)} {
+	for _, s := range []Subject{consumer(models.RoleViewer, false), staff(models.PersonaManufacturing)} {
 		if d := CanUnlock(s); d.Allowed {
 			t.Errorf("CanUnlock(%+v) = allow, want deny", s)
 		}
@@ -67,7 +67,7 @@ func TestCanStartVehicleRequiresOwnerAndStepUp(t *testing.T) {
 		{"owner+stale", consumer(models.RoleOwner, false), false, "step-up"},
 		{"driver+fresh", consumer(models.RoleDriver, true), false, "owner or co-owner"},
 		{"viewer+fresh", consumer(models.RoleViewer, true), false, "owner or co-owner"},
-		{"service_tech", staff(models.PersonaServiceTechnician), false, "owner or co-owner"},
+		{"staff", staff(models.PersonaManufacturing), false, "owner or co-owner"},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {

@@ -126,7 +126,7 @@ A `Subject` is either a **consumer** (with a resource-scoped `Role` on the targe
 
 | Action | Function | Allowed for |
 |---|---|---|
-| view_status | `CanViewStatus` | owner, co-owner, driver, viewer, **service_technician** |
+| view_status | `CanViewStatus` | owner, co-owner, driver, viewer |
 | unlock_doors | `CanUnlock` | owner, co-owner, driver |
 | start_climate | `CanStartClimate` | owner, co-owner, driver |
 | **start_vehicle** | `CanStartVehicle` | owner, co-owner **+ fresh passkey step-up** |

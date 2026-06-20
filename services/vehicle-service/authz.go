@@ -39,15 +39,12 @@ func (s Subject) hasRole(roles ...string) bool {
 
 func (s Subject) hasPersona(p string) bool { return s.isStaff() && s.Persona == p }
 
-// CanViewStatus: owner, co-owner, driver, viewer, or staff service_technician.
+// CanViewStatus: owner, co-owner, driver, viewer.
 func CanViewStatus(s Subject) Decision {
 	if s.hasRole(models.RoleOwner, models.RoleCoOwner, models.RoleDriver, models.RoleViewer) {
 		return allow()
 	}
-	if s.hasPersona(models.PersonaServiceTechnician) {
-		return allow()
-	}
-	return deny("view_status requires a vehicle role or the service_technician persona")
+	return deny("view_status requires a vehicle role")
 }
 
 // CanUnlock: owner, co-owner, driver.

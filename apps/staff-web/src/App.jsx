@@ -4,7 +4,6 @@ import * as api from './api.js'
 const PERSONAS = [
   { id: 'manufacturing', label: 'Manufacturing Operator', can: 'create_vehicle' },
   { id: 'sales_support', label: 'Sales / Support', can: 'assign_owner' },
-  { id: 'service_technician', label: 'Service Technician', can: 'view_status' },
   { id: 'security_auditor', label: 'Security Auditor', can: 'read_audit_logs' },
 ]
 

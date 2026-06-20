@@ -21,8 +21,7 @@ type App struct {
 
 func validPersona(p string) bool {
 	switch p {
-	case models.PersonaManufacturing, models.PersonaSalesSupport,
-		models.PersonaServiceTechnician, models.PersonaSecurityAuditor:
+	case models.PersonaManufacturing, models.PersonaSalesSupport, models.PersonaSecurityAuditor:
 		return true
 	}
 	return false

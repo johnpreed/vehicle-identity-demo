@@ -99,7 +99,6 @@ In **staff-web**, switch personas and observe server-side enforcement:
 
 | Persona | Try | Expected |
 |---|---|---|
-| **Service Technician** | View Fleet / a vehicle's status | Allowed (read only); cannot unlock/start/assign |
 | **Sales / Support** | **Assign owner** (paste a vehicle id + a username) | Allowed |
 | **Sales / Support** | **Create vehicle** | **Denied** |
 | **Manufacturing** | **Create vehicle** | Allowed |
