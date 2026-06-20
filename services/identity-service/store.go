@@ -173,7 +173,8 @@ func (s *Store) UpsertServiceIdentity(ctx context.Context, clientID, secret, sub
 	return err
 }
 
-// UpsertBootstrapCredential self-seeds the factory-provisioned device secret.
+// UpsertBootstrapCredential records a vehicle's factory-provisioned device secret.
+// It is called by the bootstrap.provision endpoint during factory "burn-in".
 func (s *Store) UpsertBootstrapCredential(ctx context.Context, vin, secret string) error {
 	_, err := s.pool.Exec(ctx,
 		`INSERT INTO vehicle_bootstrap_credentials (vin, bootstrap_secret) VALUES ($1,$2)

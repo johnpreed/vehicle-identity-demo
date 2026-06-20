@@ -34,6 +34,7 @@ These are intentional to keep the demo small; they are **not** production-safe:
 - Staff personas are unauthenticated (a header). Production needs real staff auth.
 - The Ed25519 signing key is generated in-memory on startup (rotates on restart) and is not persisted to a
   KMS/HSM.
-- Vehicle bootstrap secrets are seeded shared secrets rather than per-device attestation keys.
+- Vehicle bootstrap secrets are factory-provisioned **symmetric** shared secrets rather than per-device
+  asymmetric attestation keys.
 - Services run over plain HTTP on localhost (no TLS); cookies are not `Secure`.
 - Audit storage is a normal Postgres table (not append-only / tamper-evident).

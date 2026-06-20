@@ -4,9 +4,8 @@
 // using a scoped factory workload token), then exchanges each device's VIN +
 // bootstrap secret for a short-lived JWT, registers the device, and heartbeats.
 //
-// The seeded device (SIM_VIN) keeps its pre-provisioned env secret; every other VIN
-// the simulator discovers is burned in on the fly. All inter-service calls go through
-// the shared identity/vehicle client libraries.
+// The fleet starts empty and treats every discovered VIN uniformly. All inter-service
+// calls go through the shared identity/vehicle client libraries.
 package main
 
 import (
@@ -40,8 +39,6 @@ type device struct {
 type fleet struct {
 	identity     *identityclient.Client
 	vehicle      *vehicleclient.Client
-	seedVIN      string
-	seedSecret   string
 	factoryToken *identityclient.CachedToken // factory workload token (bootstrap.provision)
 	interval     time.Duration
 
@@ -55,12 +52,10 @@ func main() {
 	factorySecret := env("FACTORY_CLIENT_SECRET", "vehicle-factory-secret")
 
 	f := &fleet{
-		identity:   idc,
-		vehicle:    vehicleclient.New(env("VEHICLE_URL", "http://vehicle-service:8082")),
-		seedVIN:    env("SIM_VIN", "VIN-DEMO-0001"),
-		seedSecret: env("SIM_BOOTSTRAP_SECRET", "bootstrap-demo-secret"),
-		interval:   durationEnv("RECONCILE_INTERVAL", 8*time.Second),
-		devices:    map[string]*device{},
+		identity: idc,
+		vehicle:  vehicleclient.New(env("VEHICLE_URL", "http://vehicle-service:8082")),
+		interval: durationEnv("RECONCILE_INTERVAL", 8*time.Second),
+		devices:  map[string]*device{},
 	}
 	f.factoryToken = identityclient.NewCachedToken(func(ctx context.Context) (identityclient.Token, error) {
 		return idc.ServiceToken(ctx, factoryID, factorySecret, models.AudIdentityService, models.ScopeBootstrapProvision)
@@ -121,12 +116,8 @@ func (f *fleet) bringOnline(ctx context.Context, d *device) {
 	corr := httpx.NewCorrelationID()
 	ctx = httpx.WithCorrelationID(ctx, corr)
 
-	if d.secret == "" {
-		if d.vin == f.seedVIN && f.seedSecret != "" {
-			d.secret = f.seedSecret // pre-provisioned seeded device
-		} else if !f.burnIn(ctx, d) {
-			return
-		}
+	if d.secret == "" && !f.burnIn(ctx, d) {
+		return
 	}
 	if d.token == nil {
 		d.token = identityclient.NewCachedToken(func(c context.Context) (identityclient.Token, error) {
@@ -150,8 +141,8 @@ func (f *fleet) bringOnline(ctx context.Context, d *device) {
 	log.Printf("[fleet] %s registered as %s", d.vin, d.vehicleID)
 }
 
-// burnIn provisions a fresh bootstrap credential for a non-seeded VIN using a
-// factory workload token. Returns true on success.
+// burnIn provisions a fresh bootstrap credential for a VIN using a factory workload
+// token. Returns true on success.
 func (f *fleet) burnIn(ctx context.Context, d *device) bool {
 	factoryBearer, err := f.factoryToken.Value(ctx)
 	if err != nil {

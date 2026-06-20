@@ -84,13 +84,13 @@ scope** (see `packages/shared/jwt`).
 - **Consumer sessions** are opaque cookies (`vid_session`, HttpOnly, SameSite=Lax). vehicle-service never
   re-implements session logic — it **introspects** the cookie by calling identity-service `/me`, so
   identity-service stays the single source of truth for *who the user is* and *whether step-up is fresh*.
-- **Vehicle device credentials are factory-provisioned.** Each device has a VIN and a bootstrap secret. The
-  seeded demo device (`VIN-DEMO-0001`) ships with a secret pre-seeded into identity-service. For any other
-  vehicle a manufacturing operator creates, the **fleet simulator** performs factory "burn-in": it provisions
-  a fresh bootstrap credential at identity-service (using a scoped `bootstrap.provision` factory workload
-  token) before the device calls home. At runtime the device exchanges VIN + bootstrap secret for a
-  short-lived JWT — the long-lived secret never leaves the device boundary and is never used to call business
-  APIs.
+- **Vehicle device credentials are factory-provisioned.** Each device has a VIN and a bootstrap secret. When
+  a manufacturing operator creates a vehicle, the **fleet simulator** performs factory "burn-in": it
+  generates a fresh bootstrap secret and provisions it at identity-service (using a scoped
+  `bootstrap.provision` factory workload token) before the device calls home. No device credential is
+  pre-seeded — every vehicle is burned in on demand. At runtime the device exchanges VIN + bootstrap secret
+  for a short-lived JWT — the long-lived secret never leaves the device boundary and is never used to call
+  business APIs.
 - **Workload credentials** (e.g. vehicle-service's and the vehicle-factory's `client_id`/`client_secret`)
   are used only to obtain short-lived JWTs from identity-service, scoped to a specific audience and scope.
 - **Staff personas are unauthenticated** by design — this is a demo of *authorization*, not staff SSO.
@@ -113,13 +113,13 @@ powered, climate) is orthogonal to lifecycle and ownership:
 Lifecycle transitions in the demo:
 
 1. **Create** (manufacturing staff) → `MANUFACTURED`, a claim code is generated.
-2. **Burn-in** (fleet simulator, for non-seeded VINs) → a bootstrap credential is provisioned at
+2. **Burn-in** (fleet simulator, for every created vehicle) → a fresh bootstrap credential is provisioned at
    identity-service via a `bootstrap.provision` factory workload token.
 3. **Register** (the device calls home with a VIN-bound `vehicle_bootstrap` JWT) → device identity recorded,
    `lifecycle = CLAIMABLE`, `connectivity = ONLINE`. Registration is *gated on the vehicle having been
    created* and on the token subject matching the VIN. The `simulated-vehicle` service runs as a **fleet
-   simulator**: it discovers every created vehicle and brings its device online, so *any* vehicle a
-   manufacturing operator creates calls home automatically (not just the seeded demo VIN).
+   simulator**: it starts empty, discovers every created vehicle, and brings its device online, so *any*
+   vehicle a manufacturing operator creates calls home automatically.
 4. **Claim** (consumer with VIN + claim code) or **Assign owner** (sales_support override) →
    `lifecycle = CLAIMED`, `ownership = OWNER_ASSIGNED`, an `owner` grant is created.
 

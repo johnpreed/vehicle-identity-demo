@@ -48,10 +48,10 @@ creates and brings each one's device online automatically. You can watch the fle
 
 > What was demonstrated: a workload (the vehicle) authenticating with a factory credential, receiving a
 > short-lived JWT, and registering — with **every service-to-service token issuance and the signing-key
-> lifecycle** recorded and correlation-traceable. This works for **any** created vehicle, not just the
-> seeded demo VIN.
+> lifecycle** recorded and correlation-traceable. Every created vehicle is burned in and brought online the
+> same way; the fleet starts empty.
 
-If you prefer to skip the manual step, run `make seed` instead (creates the demo vehicle for you).
+If you prefer to skip the manual step, run `make seed` instead (creates a demo vehicle for you).
 
 ---
 

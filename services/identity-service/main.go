@@ -106,15 +106,11 @@ func main() {
 	log.Fatal(srv.ListenAndServe())
 }
 
-// selfSeed provisions the credentials the platform needs to function out of the box:
-// the simulated vehicle's factory bootstrap secret and the vehicle-service workload client.
+// selfSeed provisions the workload credentials the platform needs to function out of
+// the box: the vehicle-service client (audit writes) and the vehicle-factory client
+// (bootstrap provisioning). Vehicle bootstrap credentials are not pre-seeded — the
+// factory provisions them on demand as vehicles are created.
 func selfSeed(ctx context.Context, store *Store) error {
-	if err := store.UpsertBootstrapCredential(ctx,
-		env("SIM_VIN", "VIN-DEMO-0001"),
-		env("SIM_BOOTSTRAP_SECRET", "bootstrap-demo-secret"),
-	); err != nil {
-		return err
-	}
 	if err := store.UpsertServiceIdentity(ctx,
 		env("VEHICLE_SERVICE_CLIENT_ID", "vehicle-service"),
 		env("VEHICLE_SERVICE_CLIENT_SECRET", "vehicle-service-secret"),

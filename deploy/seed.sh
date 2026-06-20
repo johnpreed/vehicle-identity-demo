@@ -1,14 +1,11 @@
 #!/usr/bin/env bash
-# Seed convenience: create the demo vehicle (manufacturing persona) so the simulated
-# vehicle can register without manually driving the staff UI first.
+# Convenience: create a demo vehicle (manufacturing persona) so you have something to
+# claim without driving the staff UI first. The simulated-vehicle fleet then burns in a
+# bootstrap credential for it and registers it automatically. Pass a VIN as $1 to override.
 set -euo pipefail
 
 VEHICLE_URL="${VEHICLE_URL_HOST:-http://localhost:8082}"
-VIN="${SIM_VIN:-}"
-if [ -z "${VIN}" ] && [ -f .env ]; then
-  VIN="$(grep -E '^SIM_VIN=' .env | head -1 | cut -d= -f2- | tr -d '"')"
-fi
-VIN="${VIN:-VIN-DEMO-0001}"
+VIN="${1:-VIN-DEMO-0001}"
 
 echo "Creating demo vehicle ${VIN} via ${VEHICLE_URL} (manufacturing persona)..."
 curl -fsS -X POST "${VEHICLE_URL}/staff/vehicles/create" \
@@ -18,4 +15,4 @@ curl -fsS -X POST "${VEHICLE_URL}/staff/vehicles/create" \
     echo "Create failed (vehicle may already exist). Continuing."
   }
 echo
-echo "Done. The simulated vehicle will call home and register within a few seconds."
+echo "Done. The simulated vehicle will burn in a credential and register it within a few seconds."

@@ -37,8 +37,6 @@ services:
       WEBAUTHN_RP_NAME: ${WEBAUTHN_RP_NAME:-Vehicle Identity Demo}
       WEBAUTHN_RP_ORIGINS: ${WEBAUTHN_RP_ORIGINS:-http://localhost:5173}
       WEB_ORIGINS: http://localhost:5173,http://localhost:5174
-      SIM_VIN: ${SIM_VIN:-VIN-DEMO-0001}
-      SIM_BOOTSTRAP_SECRET: ${SIM_BOOTSTRAP_SECRET:-bootstrap-demo-secret}
       VEHICLE_SERVICE_CLIENT_ID: ${VEHICLE_SERVICE_CLIENT_ID:-vehicle-service}
       VEHICLE_SERVICE_CLIENT_SECRET: ${VEHICLE_SERVICE_CLIENT_SECRET:-vehicle-service-secret}
       FACTORY_CLIENT_ID: ${FACTORY_CLIENT_ID:-vehicle-factory}
@@ -110,8 +108,6 @@ services:
       PORT: "8084"
       IDENTITY_URL: http://identity-service:8081
       VEHICLE_URL: http://vehicle-service:8082
-      SIM_VIN: ${SIM_VIN:-VIN-DEMO-0001}
-      SIM_BOOTSTRAP_SECRET: ${SIM_BOOTSTRAP_SECRET:-bootstrap-demo-secret}
       FACTORY_CLIENT_ID: ${FACTORY_CLIENT_ID:-vehicle-factory}
       FACTORY_CLIENT_SECRET: ${FACTORY_CLIENT_SECRET:-vehicle-factory-secret}
       RECONCILE_INTERVAL: 8s
