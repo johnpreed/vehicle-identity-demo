@@ -53,7 +53,22 @@ func main() {
 		log.Fatalf("seed: %v", err)
 	}
 
-	app := &App{store: store, web: web, ceremony: newCeremonyStore(), issuer: issuer}
+	audit := newAuditEmitter(issuer, env("AUDIT_URL", "http://audit-service:8083"))
+	app := &App{store: store, web: web, ceremony: newCeremonyStore(), issuer: issuer, audit: audit}
+
+	// Record the signing key's "birth" so key lifecycle is visible in the audit log.
+	// A restart generates a new key and emits a fresh event (a key roll). This runs
+	// in the background and retries because audit-service may still be starting.
+	go audit.emitWithRetry(context.Background(), httpx.NewCorrelationID(), models.AuditEvent{
+		ActorType:    models.ActorService,
+		ActorID:      "service:identity-service",
+		Action:       "signing_key_generated",
+		ResourceType: "signing_key",
+		ResourceID:   issuer.KeyID(),
+		Decision:     models.DecisionAllow,
+		Reason:       "Ed25519 signing key generated at startup",
+		Metadata:     map[string]any{"alg": "EdDSA", "use": "sig", "kid": issuer.KeyID()},
+	})
 
 	// identity-service verifies its own tokens (issued for audience identity-service)
 	// locally from the issuer's public key, so the factory provisioning endpoint can

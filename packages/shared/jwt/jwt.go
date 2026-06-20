@@ -70,7 +70,16 @@ func NewIssuer(issuer string) (*Issuer, error) {
 
 // Issue creates a signed token for the given subject, audience and scope.
 func (i *Issuer) Issue(sub, aud, scope string) (string, error) {
+	token, _, _, err := i.IssueWithID(sub, aud, scope)
+	return token, err
+}
+
+// IssueWithID creates a signed token and also returns its unique id (jti) and
+// expiry, so callers (e.g. audit logging) can record token details.
+func (i *Issuer) IssueWithID(sub, aud, scope string) (token, jti string, exp time.Time, err error) {
 	now := time.Now()
+	jti = uuid.NewString()
+	exp = now.Add(Lifetime)
 	claims := Claims{
 		Scope: scope,
 		RegisteredClaims: gojwt.RegisteredClaims{
@@ -78,14 +87,18 @@ func (i *Issuer) Issue(sub, aud, scope string) (string, error) {
 			Subject:   sub,
 			Audience:  gojwt.ClaimStrings{aud},
 			IssuedAt:  gojwt.NewNumericDate(now),
-			ExpiresAt: gojwt.NewNumericDate(now.Add(Lifetime)),
-			ID:        uuid.NewString(),
+			ExpiresAt: gojwt.NewNumericDate(exp),
+			ID:        jti,
 		},
 	}
 	tok := gojwt.NewWithClaims(gojwt.SigningMethodEdDSA, claims)
 	tok.Header["kid"] = i.keyID
-	return tok.SignedString(i.private)
+	token, err = tok.SignedString(i.private)
+	return token, jti, exp, err
 }
+
+// KeyID returns the issuer's active signing key id (the JWKS `kid`).
+func (i *Issuer) KeyID() string { return i.keyID }
 
 // JWKS returns the issuer's public key as a JWKS document.
 func (i *Issuer) JWKS() JWKS {

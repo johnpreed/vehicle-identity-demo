@@ -1,11 +1,35 @@
 package main
 
 import (
+	"context"
 	"net/http"
 	"strings"
 
 	"vehicle-identity-demo/packages/shared/httpx"
+	"vehicle-identity-demo/packages/shared/middleware"
+	"vehicle-identity-demo/packages/shared/models"
 )
+
+// auditTokenEvent records a service_token_issued decision (ALLOW or DENY) so the
+// audit log shows every workload that authenticated to call another service. It is
+// fire-and-forget so token issuance never blocks on audit-service.
+func (a *App) auditTokenEvent(r *http.Request, actorType, actorID, audience, reason string, allow bool, meta map[string]any) {
+	decision := models.DecisionDeny
+	if allow {
+		decision = models.DecisionAllow
+	}
+	corr := httpx.CorrelationID(r.Context())
+	go a.audit.emit(context.Background(), corr, models.AuditEvent{
+		ActorType:    actorType,
+		ActorID:      actorID,
+		Action:       "service_token_issued",
+		ResourceType: "service",
+		ResourceID:   audience,
+		Decision:     decision,
+		Reason:       reason,
+		Metadata:     meta,
+	})
+}
 
 // handleProvisionBootstrap registers (or rotates) a vehicle's factory bootstrap
 // credential. It models the manufacturing "burn-in" step: a trusted factory
@@ -24,6 +48,20 @@ func (a *App) handleProvisionBootstrap(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	actor := "service:vehicle-factory"
+	if claims := middleware.ClaimsFrom(r.Context()); claims != nil {
+		actor = claims.Subject
+	}
+	corr := httpx.CorrelationID(r.Context())
+	go a.audit.emit(context.Background(), corr, models.AuditEvent{
+		ActorType:    models.ActorService,
+		ActorID:      actor,
+		Action:       "bootstrap_provisioned",
+		ResourceType: "vehicle_bootstrap_credential",
+		ResourceID:   req.VIN,
+		Decision:     models.DecisionAllow,
+		Reason:       "factory bootstrap credential provisioned",
+	})
 	httpx.WriteJSON(w, http.StatusCreated, map[string]string{"vin": req.VIN, "status": "provisioned"})
 }
 
@@ -65,25 +103,29 @@ func (a *App) issueVehicleToken(w http.ResponseWriter, r *http.Request, vin, sec
 		httpx.WriteError(w, http.StatusBadRequest, "vin and bootstrap_secret required")
 		return
 	}
+	if audience == "" {
+		audience = "vehicle-service"
+	}
 	want, err := a.store.GetBootstrapSecret(r.Context(), vin)
 	if err != nil {
 		httpx.WriteError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 	if want == "" || want != secret {
+		a.auditTokenEvent(r, models.ActorVehicle, "vehicle:"+vin, audience,
+			"invalid bootstrap credential", false, map[string]any{"grant_type": "vehicle_bootstrap"})
 		httpx.WriteError(w, http.StatusUnauthorized, "invalid bootstrap credential")
 		return
 	}
-	if audience == "" {
-		audience = "vehicle-service"
-	}
 	sub := "service:simulated-vehicle:" + vin
 	scope := "vehicle.register vehicle.heartbeat"
-	token, err := a.issuer.Issue(sub, audience, scope)
+	token, jti, exp, err := a.issuer.IssueWithID(sub, audience, scope)
 	if err != nil {
 		httpx.WriteError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	a.auditTokenEvent(r, models.ActorVehicle, sub, audience, "workload token issued", true,
+		map[string]any{"grant_type": "vehicle_bootstrap", "scope": scope, "jti": jti, "expires_at": exp})
 	httpx.WriteJSON(w, http.StatusOK, map[string]any{"token": token, "sub": sub, "scope": scope, "audience": audience})
 }
 
@@ -98,24 +140,32 @@ func (a *App) issueServiceToken(w http.ResponseWriter, r *http.Request, clientID
 		return
 	}
 	if subject == "" || secret != clientSecret {
+		a.auditTokenEvent(r, models.ActorService, "client:"+clientID, audience,
+			"invalid client credentials", false, map[string]any{"grant_type": "service_credential"})
 		httpx.WriteError(w, http.StatusUnauthorized, "invalid client credentials")
 		return
 	}
 	if !contains(allowedAuds, audience) {
+		a.auditTokenEvent(r, models.ActorService, subject, audience,
+			"audience not allowed for client", false, map[string]any{"grant_type": "service_credential", "scope": scope})
 		httpx.WriteError(w, http.StatusForbidden, "audience not allowed for client")
 		return
 	}
 	for _, s := range strings.Fields(scope) {
 		if !contains(allowedScopes, s) {
+			a.auditTokenEvent(r, models.ActorService, subject, audience,
+				"scope not allowed: "+s, false, map[string]any{"grant_type": "service_credential", "scope": scope})
 			httpx.WriteError(w, http.StatusForbidden, "scope not allowed: "+s)
 			return
 		}
 	}
-	token, err := a.issuer.Issue(subject, audience, scope)
+	token, jti, exp, err := a.issuer.IssueWithID(subject, audience, scope)
 	if err != nil {
 		httpx.WriteError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	a.auditTokenEvent(r, models.ActorService, subject, audience, "workload token issued", true,
+		map[string]any{"grant_type": "service_credential", "scope": scope, "jti": jti, "expires_at": exp})
 	httpx.WriteJSON(w, http.StatusOK, map[string]any{"token": token, "sub": subject, "scope": scope, "audience": audience})
 }
 

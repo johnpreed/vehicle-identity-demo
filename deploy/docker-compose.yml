@@ -32,6 +32,7 @@ services:
       POSTGRES_PORT: "5432"
       IDENTITY_DB: identity
       JWT_ISSUER: ${JWT_ISSUER:-vehicle-demo.identity-service}
+      AUDIT_URL: http://audit-service:8083
       WEBAUTHN_RP_ID: ${WEBAUTHN_RP_ID:-localhost}
       WEBAUTHN_RP_NAME: ${WEBAUTHN_RP_NAME:-Vehicle Identity Demo}
       WEBAUTHN_RP_ORIGINS: ${WEBAUTHN_RP_ORIGINS:-http://localhost:5173}

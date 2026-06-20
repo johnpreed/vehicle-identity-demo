@@ -35,11 +35,20 @@ creates and brings each one's device online automatically. You can watch the fle
    **↻** on the **Fleet** card:
    - `lifecycle = CLAIMABLE`, `connectivity = ONLINE`.
 4. Switch persona to **Security Auditor**, scroll to **Audit logs**, click **Search**:
-   - You'll see `create_vehicle` (actor `staff:manufacturing`, ALLOW) and `register_vehicle`
-     (actor `vehicle:service:simulated-vehicle:<VIN>`, ALLOW) sharing a correlation trail.
+   - You'll see the business actions `create_vehicle` (actor `staff:manufacturing`) and `register_vehicle`
+     (actor `vehicle:service:simulated-vehicle:<VIN>`), **plus the service-to-service plumbing**:
+     `bootstrap_provisioned` (factory burns in the device credential), and `service_token_issued` events
+     for each workload-to-workload call (device→vehicle-service, factory→identity-service,
+     vehicle-service→audit-service).
+   - **Click any row to expand the raw JSON.** The call-home events share one `correlation_id`, so you can
+     trace the whole flow: `bootstrap_provisioned` → `service_token_issued` → `register_vehicle`.
+   - You'll also see a one-time **`signing_key_generated`** event — identity-service's Ed25519 signing key.
+     Restart identity-service (`docker compose restart identity-service`) and search again to see a **new
+     key event** — i.e. a key/"certificate" roll captured in the audit log.
 
 > What was demonstrated: a workload (the vehicle) authenticating with a factory credential, receiving a
-> short-lived JWT, and registering — all audited. This works for **any** created vehicle, not just the
+> short-lived JWT, and registering — with **every service-to-service token issuance and the signing-key
+> lifecycle** recorded and correlation-traceable. This works for **any** created vehicle, not just the
 > seeded demo VIN.
 
 If you prefer to skip the manual step, run `make seed` instead (creates the demo vehicle for you).

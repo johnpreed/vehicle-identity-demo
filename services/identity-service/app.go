@@ -23,6 +23,7 @@ type App struct {
 	web      *webauthn.WebAuthn
 	ceremony *ceremonyStore
 	issuer   *sjwt.Issuer
+	audit    *auditEmitter
 }
 
 func (a *App) loadWAUser(r *http.Request, userID string) (*waUser, error) {

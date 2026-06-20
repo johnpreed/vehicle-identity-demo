@@ -147,6 +147,25 @@ Audit fields: `id`, `correlation_id`, `actor_type`, `actor_id`, `action`, `resou
 A **correlation id** is generated at the edge (`X-Correlation-Id`) and propagated through every
 service-to-service hop and into the audit event, so a single user action can be traced end to end.
 
+### Service-to-service & key-lifecycle events
+
+The audit log captures not just business actions but the **service-to-service (S2S) plumbing**, so an
+auditor can see every workload-to-workload interaction the identity platform brokers:
+
+- **`service_token_issued`** — emitted by identity-service every time it mints a workload JWT (ALLOW), and
+  on every rejected token request (DENY: bad bootstrap secret, invalid client credentials, disallowed
+  audience/scope). The actor is the requesting workload (`sub`), the resource is the target service
+  (`aud`), and metadata records `grant_type`, `scope`, `jti`, and `expires_at`. Because a token is minted
+  whenever one service needs to call another, this is the canonical record of S2S calls.
+- **`bootstrap_provisioned`** — emitted when the factory burns in a vehicle's bootstrap credential.
+- **`signing_key_generated`** — emitted when identity-service generates its Ed25519 signing key (at
+  startup). Restarting the service generates a new key and logs a fresh event — i.e. **key/"certificate"
+  rotation shows up in the audit log** (metadata records the `kid` and `alg`).
+
+Because these S2S events carry the same `correlation_id` as the business action that triggered them, one
+call-home flow groups together as, e.g.: `bootstrap_provisioned` → `service_token_issued` →
+`register_vehicle` under a single correlation id.
+
 ## High-risk command step-up
 
 `start_vehicle` is the high-risk command and has three independent requirements:
