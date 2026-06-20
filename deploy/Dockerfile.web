@@ -1,0 +1,10 @@
+# Dev-server image for a React/Vite web app in this monorepo.
+# Usage: build with --build-arg APP=<app-dir-name>.
+FROM node:25-alpine
+WORKDIR /app
+ARG APP
+COPY apps/${APP}/package.json ./
+RUN npm install
+COPY apps/${APP}/ ./
+EXPOSE 5173
+CMD ["npm", "run", "dev"]

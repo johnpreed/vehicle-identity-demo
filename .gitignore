@@ -1,0 +1,22 @@
+# Go
+/bin/
+*.test
+*.out
+
+# Node
+node_modules/
+dist/
+.vite/
+*.local
+
+# Env
+.env
+
+# OS
+.DS_Store
+
+# stray root-level service binaries
+/identity-service
+/vehicle-service
+/audit-service
+/simulated-vehicle
