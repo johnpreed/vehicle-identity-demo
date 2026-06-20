@@ -3,9 +3,6 @@
 // performs factory "burn-in" (provisioning a bootstrap credential at identity-service
 // using a scoped factory workload token), then exchanges each device's VIN +
 // bootstrap secret for a short-lived JWT, registers the device, and heartbeats.
-//
-// The fleet starts empty and treats every discovered VIN uniformly. All inter-service
-// calls go through the shared identity/vehicle client libraries.
 package main
 
 import (
@@ -54,7 +51,7 @@ func main() {
 	f := &fleet{
 		identity: idc,
 		vehicle:  vehicleclient.New(env("VEHICLE_URL", "http://vehicle-service:8082")),
-		interval: durationEnv("RECONCILE_INTERVAL", 8*time.Second),
+		interval: durationEnv("NEW_VEHICLE_DISCOVERY_INTERVAL", 8*time.Second),
 		devices:  map[string]*device{},
 	}
 	f.factoryToken = identityclient.NewCachedToken(func(ctx context.Context) (identityclient.Token, error) {
@@ -77,15 +74,13 @@ func main() {
 func (f *fleet) run() {
 	ctx := context.Background()
 	for {
-		f.reconcile(ctx)
+		f.discoverNewlyCreatedCars(ctx)
 		time.Sleep(f.interval)
 	}
 }
 
-// reconcile discovers all created vehicles, brings new ones online, and heartbeats
-// the rest. Discovery uses the manufacturing persona: the simulator is the
-// manufacturer's device fleet gateway.
-func (f *fleet) reconcile(ctx context.Context) {
+// discovers all created vehicles, brings new ones online, and heartbeats the rest.
+func (f *fleet) discoverNewlyCreatedCars(ctx context.Context) {
 	dctx := httpx.WithCorrelationID(ctx, httpx.NewCorrelationID())
 	vehicles, err := f.vehicle.List(dctx, models.PersonaManufacturing)
 	if err != nil {
