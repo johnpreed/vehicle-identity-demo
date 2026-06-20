@@ -38,18 +38,14 @@ export default function App() {
 
       {notice && <div className={'notice ' + notice.type}>{notice.text}</div>}
 
+      {/* All personas see the fleet; each persona sees only the action it is
+          authorized for. Authorization is still enforced server-side — hiding the
+          other widgets is purely cosmetic. */}
       <Vehicles persona={persona} onNotice={setNotice} />
 
-      <div className="grid">
-        <div>
-          <CreateVehicle persona={persona} onNotice={setNotice} />
-        </div>
-        <div>
-          <AssignOwner persona={persona} onNotice={setNotice} />
-        </div>
-      </div>
-
-      <AuditLogs persona={persona} onNotice={setNotice} />
+      {persona === 'manufacturing' && <CreateVehicle persona={persona} onNotice={setNotice} />}
+      {persona === 'sales_support' && <AssignOwner persona={persona} onNotice={setNotice} />}
+      {persona === 'security_auditor' && <AuditLogs persona={persona} onNotice={setNotice} />}
     </div>
   )
 }

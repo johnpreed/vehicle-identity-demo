@@ -95,18 +95,27 @@ If you prefer to skip the manual step, run `make seed` instead (creates the demo
 
 ## Flow 5 — Staff authorization (persona least-privilege)
 
-In **staff-web**, switch personas and observe server-side enforcement:
+In **staff-web**, the **Fleet** is visible to every persona, but each persona only sees the **one action it
+is authorized for**. Switch personas and watch the action widget change:
 
-| Persona | Try | Expected |
+| Persona | Sees | Can do |
 |---|---|---|
-| **Sales / Support** | **Assign owner** (paste a vehicle id + a username) | Allowed |
-| **Sales / Support** | **Create vehicle** | **Denied** |
-| **Manufacturing** | **Create vehicle** | Allowed |
-| **Manufacturing** | **Assign owner** | **Denied** |
-| **Security Auditor** | **Audit logs → Search** | Allowed |
-| Any non-auditor | **Audit logs → Search** | **Denied** (403) |
+| **Manufacturing Operator** | Fleet + **Create vehicle** | create vehicles |
+| **Sales / Support** | Fleet + **Assign owner** | assign an owner to a vehicle |
+| **Security Auditor** | Fleet + **Audit logs** | search the audit log |
 
-Each denial is itself written to the audit log (action with `decision = DENY`).
+Hiding the other widgets is purely a UI convenience — **authorization is still enforced server-side**. The
+endpoints reject the wrong persona regardless of the UI, and every denial is itself audited
+(`decision = DENY`). You can confirm directly, e.g. a non-manufacturing persona calling create:
+
+```bash
+# sales_support is NOT allowed to create vehicles -> 403, and the denial is audited
+curl -i -X POST http://localhost:8082/staff/vehicles/create \
+  -H 'X-Staff-Persona: sales_support' -H 'Content-Type: application/json' -d '{}'
+
+# a non-auditor persona cannot read the audit log -> 403
+curl -i 'http://localhost:8083/audit/search' -H 'X-Staff-Persona: manufacturing'
+```
 
 ---
 
