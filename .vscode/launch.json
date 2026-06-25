@@ -1,0 +1,63 @@
+{
+  // Debug the Go services on the host (with Postgres + web apps in Docker via
+  // deploy/docker-compose.infra.yml). The env overrides point inter-service URLs at
+  // localhost; Postgres connects via the shared/db defaults (localhost:5432, vid/vidpass).
+  // Use the "Debug all services" compound, or launch a single service.
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "identity-service",
+      "type": "go",
+      "request": "launch",
+      "mode": "debug",
+      "program": "${workspaceFolder}/services/identity-service",
+      "env": {
+        "AUDIT_URL": "http://localhost:8083"
+      }
+    },
+    {
+      "name": "vehicle-service",
+      "type": "go",
+      "request": "launch",
+      "mode": "debug",
+      "program": "${workspaceFolder}/services/vehicle-service",
+      "env": {
+        "IDENTITY_URL": "http://localhost:8081",
+        "AUDIT_URL": "http://localhost:8083"
+      }
+    },
+    {
+      "name": "audit-service",
+      "type": "go",
+      "request": "launch",
+      "mode": "debug",
+      "program": "${workspaceFolder}/services/audit-service",
+      "env": {
+        "IDENTITY_URL": "http://localhost:8081"
+      }
+    },
+    {
+      "name": "simulated-vehicle",
+      "type": "go",
+      "request": "launch",
+      "mode": "debug",
+      "program": "${workspaceFolder}/services/simulated-vehicle",
+      "env": {
+        "IDENTITY_URL": "http://localhost:8081",
+        "VEHICLE_URL": "http://localhost:8082"
+      }
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Debug all services",
+      "configurations": [
+        "identity-service",
+        "vehicle-service",
+        "audit-service",
+        "simulated-vehicle"
+      ],
+      "stopAll": true
+    }
+  ]
+}
