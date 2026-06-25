@@ -18,6 +18,16 @@ services:
       timeout: 3s
       retries: 20
 
+  adminer:
+    image: adminer:4
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+    ports:
+      - "8088:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   identity-service:
     build:
       context: ..

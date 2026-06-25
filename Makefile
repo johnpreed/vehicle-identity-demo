@@ -20,6 +20,7 @@ infra: ## Start infra only (Postgres + web apps) for host-side debugging in VS C
 	@echo "  consumer-web : http://localhost:5173"
 	@echo "  staff-web    : http://localhost:5174"
 	@echo "  postgres     : localhost:5432"
+	@echo "  adminer      : http://localhost:8088"
 	@echo ""
 	@echo "Next: debug the Go services from VS Code (.vscode/launch.json -> 'Debug all services')."
 	@echo "They listen on: identity :8081  vehicle :8082  audit :8083  simulated-vehicle :8084"
