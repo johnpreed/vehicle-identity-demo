@@ -2,6 +2,8 @@
 /bin/
 *.test
 *.out
+# Delve debug binaries (VS Code "go"/dlv debug builds)
+__debug_bin*
 
 # Node
 node_modules/
