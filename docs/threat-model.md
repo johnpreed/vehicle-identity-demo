@@ -38,3 +38,6 @@ These are intentional to keep the demo small; they are **not** production-safe:
   asymmetric attestation keys.
 - Services run over plain HTTP on localhost (no TLS); cookies are not `Secure`.
 - Audit storage is a normal Postgres table (not append-only / tamper-evident).
+- The demo runs a **single instance** of each service; some state (the signing key, the WebAuthn ceremony
+  store) lives in process memory and would break behind a load balancer. See
+  [`scaling-and-load-balancing.md`](./scaling-and-load-balancing.md).
